@@ -1,0 +1,29 @@
+{
+  "name": "cribbit-chaos-clean",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "packageManager": "npm@10.9.2",
+  "engines": {
+    "node": ">=24.7.0"
+  },
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "architecture:check": "node tools/architecture/check.mjs",
+    "test": "node --test tests/architecture.test.mjs",
+    "build:web": "node tools/build.mjs web",
+    "build:telegram": "node tools/build.mjs telegram",
+    "build:api": "node tools/build.mjs api",
+    "build": "npm run build:web && npm run build:telegram && npm run build:api",
+    "verify": "npm run typecheck && npm run architecture:check && npm test && npm run build"
+  },
+  "devDependencies": {
+    "typescript": "5.9.3",
+    "vite": "7.3.6",
+    "@types/node": "24.13.3"
+  }
+}
