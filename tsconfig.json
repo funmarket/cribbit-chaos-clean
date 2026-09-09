@@ -1,0 +1,54 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "strict": true,
+    "noEmit": true,
+    "lib": [
+      "ES2022",
+      "DOM"
+    ],
+    "skipLibCheck": true,
+    "baseUrl": ".",
+    "paths": {
+      "@cribbit/contracts": [
+        "packages/contracts/src/index.ts"
+      ],
+      "@cribbit/cards/presentation": [
+        "packages/cards/src/presentation.ts"
+      ],
+      "@cribbit/cards/server": [
+        "packages/cards/src/server.ts"
+      ],
+      "@cribbit/prompts/server": [
+        "packages/prompts/src/server.ts"
+      ],
+      "@cribbit/game-engine": [
+        "packages/game-engine/src/index.ts"
+      ],
+      "@cribbit/api-client": [
+        "packages/api-client/src/index.ts"
+      ],
+      "@cribbit/ui": [
+        "packages/ui/src/index.ts"
+      ],
+      "@cribbit/client-app": [
+        "packages/client-app/src/index.ts"
+      ],
+      "@cribbit/platform/types": [
+        "packages/platform/src/types.ts"
+      ],
+      "@cribbit/platform/web": [
+        "packages/platform/src/web.ts"
+      ],
+      "@cribbit/platform/telegram": [
+        "packages/platform/src/telegram.ts"
+      ]
+    }
+  },
+  "include": [
+    "apps/**/*.ts",
+    "packages/**/*.ts"
+  ]
+}
