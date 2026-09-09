@@ -1,0 +1,10 @@
+{
+  "name": "@cribbit/telegram",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "dependencies": {
+    "@cribbit/client-app": "0.0.0",
+    "@cribbit/platform": "0.0.0"
+  }
+}
