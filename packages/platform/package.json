@@ -1,0 +1,11 @@
+{
+  "name": "@cribbit/platform",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    "./types": "./src/types.ts",
+    "./web": "./src/web.ts",
+    "./telegram": "./src/telegram.ts"
+  }
+}
