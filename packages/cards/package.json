@@ -1,0 +1,10 @@
+{
+  "name": "@cribbit/cards",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    "./presentation": "./src/presentation.ts",
+    "./server": "./src/server.ts"
+  }
+}
