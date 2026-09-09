@@ -6,12 +6,12 @@ permissions:
   contents: write
 jobs:
   hydrate:
-    if: ${{ hashFiles('.p1/remaining.tgz') != '' }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - name: Restore frozen P1 files
         run: |
+          test -f .p1/remaining.tgz
           tar -xzf .p1/remaining.tgz
           rm -f .p1/remaining.tgz
           rmdir .p1 2>/dev/null || true
