@@ -1,0 +1,12 @@
+{
+  "name": "@cribbit/client-app",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "dependencies": {
+    "@cribbit/platform": "0.0.0"
+  }
+}
