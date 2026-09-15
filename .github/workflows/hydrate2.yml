@@ -9,14 +9,28 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Inspect chunk boundaries
+      - name: Map chunk overlaps
         shell: bash
         run: |
           set -eu
-          for f in .p1/chunks/*; do
-            echo "FILE=$f"
-            wc -c "$f"
-            head -c 12 "$f"; echo
-            tail -c 16 "$f"; echo
-          done
-          cat .p1/chunks/* | wc -c
+          python3 - <<'PY'
+          from pathlib import Path
+          files=sorted(Path('.p1/chunks').iterdir())
+          data=[p.read_text() for p in files]
+          for i,(p,s) in enumerate(zip(files,data)):
+              print(f'{p.name} len={len(s)} eq={s.count("=")} headers={s.count("H4sI")}')
+              if '=' in s:
+                  print(f'  first_eq={s.find("=")} last_eq={s.rfind("=")}')
+          for i in range(len(data)-1):
+              a,b=data[i],data[i+1]
+              best=0
+              limit=min(len(a),len(b))
+              for n in range(1,limit+1):
+                  if a[-n:]==b[:n]: best=n
+              print(f'overlap {files[i].name}->{files[i+1].name}: {best}')
+          for i,p in enumerate(files):
+              for j in range(i):
+                  pos=data[j].find(data[i])
+                  if pos>=0:
+                      print(f'{p.name} is contained in {files[j].name} at {pos}')
+          PY
