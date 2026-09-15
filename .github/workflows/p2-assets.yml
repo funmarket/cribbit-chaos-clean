@@ -1,0 +1,62 @@
+name: P2 approved card asset ingestion
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - .github/workflows/p2-assets.yml
+
+permissions:
+  contents: write
+
+jobs:
+  ingest:
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout clean rebuild
+        uses: actions/checkout@v4
+        with:
+          path: clean
+
+      - name: Checkout pinned preservation evidence
+        uses: actions/checkout@v4
+        with:
+          repository: funmarket/cribbit-chaos
+          ref: 77c455901516205633eb15e96f51a84206eb8174
+          path: preservation
+
+      - name: Copy approved CHAOS-133-V1 assets
+        working-directory: clean
+        run: |
+          set -euo pipefail
+          rm -rf packages/cards/assets/CHAOS-133-V1
+          mkdir -p packages/cards/assets
+          cp -R ../preservation/packages/cards/assets/CHAOS-133-V1 packages/cards/assets/
+          rm -f packages/cards/assets/CHAOS-133-V1/cards/numbers/lime/number_lime_1_02.jpg
+
+      - name: Validate staged asset corpus
+        working-directory: clean
+        run: |
+          set -euo pipefail
+          test -f packages/cards/assets/CHAOS-133-V1/backs/card_back.jpg
+          test ! -e packages/cards/assets/CHAOS-133-V1/cards/numbers/lime/number_lime_1_02.jpg
+          count="$(find packages/cards/assets/CHAOS-133-V1 -type f -name '*.jpg' | wc -l | tr -d ' ')"
+          test "$count" = "133"
+          if find packages/cards/assets/CHAOS-133-V1 -type f -name '*.jpg' -size 0 | grep -q .; then
+            echo 'zero-byte JPG found' >&2
+            exit 1
+          fi
+          while IFS= read -r file; do
+            test "$(file -b --mime-type "$file")" = "image/jpeg"
+          done < <(find packages/cards/assets/CHAOS-133-V1 -type f -name '*.jpg' -print | sort)
+
+      - name: Commit approved assets
+        working-directory: clean
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add packages/cards/assets/CHAOS-133-V1
+          git diff --cached --quiet && exit 0
+          git commit -m "feat(cards): ingest approved CHAOS-133-V1 assets"
+          git push
