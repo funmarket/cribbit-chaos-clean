@@ -28,7 +28,7 @@ test('P6 declares a server-only database workspace reachable by API only', async
   }
 });
 
-test('P6 migration owns sessions, memberships, receipts, outbox, and deadline jobs', async () => {
+test('P6 migration owns sessions, memberships, receipts, outbox, and explicit deadline command jobs', async () => {
   const sql = await readFile(
     new URL('../packages/database/migrations/0001_p6_server_infrastructure.sql', import.meta.url),
     'utf8'
@@ -45,4 +45,7 @@ test('P6 migration owns sessions, memberships, receipts, outbox, and deadline jo
   assert.match(sql, /primary\s+key\s*\(session_id,\s*command_id\)/i);
   assert.match(sql, /published_at\s+timestamptz\s+null/i);
   assert.match(sql, /status\s+text\s+not\s+null/i);
+  assert.match(sql, /principal_id\s+text\s+not\s+null/i);
+  assert.match(sql, /expected_revision\s+bigint\s+not\s+null\s+check\s*\(expected_revision\s*>=\s*0\)/i);
+  assert.match(sql, /command_payload\s+jsonb\s+not\s+null/i);
 });
