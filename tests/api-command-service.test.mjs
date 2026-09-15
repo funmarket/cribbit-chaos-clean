@@ -190,6 +190,25 @@ test('P5 rejects command ID reuse when the accepted receipt fingerprint differs'
   assert.equal(calls.commits, 0);
 });
 
+test('P5 rejects accepted receipt replay by a different authenticated session actor', async () => {
+  const stored = {
+    commandId: 'cmd-1',
+    commandFingerprint: 'fp-1',
+    sessionId: 'session-1',
+    actorPlayerId: 'p2',
+    acceptedRevision: 8
+  };
+  const { service, calls } = harness({
+    receipt: stored,
+    membership: { playerId: 'p1' }
+  });
+  const result = await service.execute({ authInput: {}, envelope: envelope() });
+  assert.deepEqual(result, { status: 'rejected', code: 'COMMAND_ID_CONFLICT' });
+  assert.equal(calls.state, 0);
+  assert.equal(calls.resolves, 0);
+  assert.equal(calls.commits, 0);
+});
+
 test('P5 rejected engine transition does not create an accepted receipt', async () => {
   const { service, calls } = harness({ definition: rejectedDefinition() });
   const result = await service.execute({ authInput: {}, envelope: envelope() });
