@@ -83,8 +83,6 @@ export const CLIENT_CAPABILITY_PATTERNS = Object.freeze([
   ['canonical deck constructor', /\b(?:buildDeck|buildCanonicalDeck|createCanonicalDeck)\b/]
 ]);
 
-export const P1_SERVER_PLACEHOLDER = '// P1 server boundary only. No HTTP listener, authentication or game mutations.\nexport {};\n';
-
 export function workspaceNameFromSpecifier(specifier) {
   if (!specifier.startsWith(INTERNAL_PREFIX)) return null;
   const parts = specifier.split('/');
