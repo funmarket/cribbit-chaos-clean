@@ -192,16 +192,51 @@ export function validateCanonicalState(state: CanonicalGameState): void {
   const effectIds = state.persistentEffects.map((effect) => effect.effectId);
   assertUnique(effectIds, 'persistent effect ID');
   const knownEffects = new Set(effectIds);
+
+  const deadlineIds = state.deadlines.map((deadline) => deadline.deadlineId);
+  assertUnique(deadlineIds, 'deadline ID');
+  const deadlinesById = new Map(
+    state.deadlines.map((deadline) => [deadline.deadlineId, deadline] as const)
+  );
+
+  if (state.rootFlow !== null) {
+    const stage = state.rootFlow.stage;
+    const stageDeadlineId = stage.deadlineId;
+    if (stageDeadlineId !== null) {
+      const deadline = deadlinesById.get(stageDeadlineId);
+      if (deadline === undefined) {
+        throw new Error(`Root-flow stage deadline ${stageDeadlineId} is missing`);
+      }
+      if (deadline.owner.kind !== 'stage' || deadline.owner.refId !== stage.stageId) {
+        throw new Error(
+          `Deadline ${stageDeadlineId} does not belong to root-flow stage ${stage.stageId}`
+        );
+      }
+    }
+  }
+
   for (const effect of state.persistentEffects) {
     assertUnique(effect.subjectPlayerIds, `persistent effect ${effect.effectId} subject player ID`);
     for (const playerId of effect.subjectPlayerIds) {
       assertKnownPlayer(knownPlayers, playerId, `Persistent effect ${effect.effectId}`);
     }
     validateRecipientScope(effect.audience, knownPlayers, `Persistent effect ${effect.effectId}`);
+    if (effect.deadlineId !== null) {
+      const deadline = deadlinesById.get(effect.deadlineId);
+      if (deadline === undefined) {
+        throw new Error(`Persistent effect deadline ${effect.deadlineId} is missing`);
+      }
+      if (
+        deadline.owner.kind !== 'persistent-effect' ||
+        deadline.owner.refId !== effect.effectId
+      ) {
+        throw new Error(
+          `Deadline ${effect.deadlineId} does not belong to persistent effect ${effect.effectId}`
+        );
+      }
+    }
   }
 
-  const deadlineIds = state.deadlines.map((deadline) => deadline.deadlineId);
-  assertUnique(deadlineIds, 'deadline ID');
   for (const deadline of state.deadlines) {
     validateRecipientScope(deadline.audience, knownPlayers, `Deadline ${deadline.deadlineId}`);
     if (deadline.owner.kind === 'root-flow') {
@@ -277,7 +312,7 @@ export function runEngineTransition<
   if (proposed.status === 'rejected') {
     return {
       status: 'rejected',
-      state: input.state,
+      state: structuredClone(input.state),
       reason: proposed.reason,
       ruleRefs: [...input.definition.ruleRefs]
     };

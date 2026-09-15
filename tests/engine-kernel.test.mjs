@@ -107,6 +107,26 @@ test('P4 rejected transitions preserve canonical state and revision', () => {
   assert.equal(initial.players[0].seat, 0);
 });
 
+test('P4 rejected transition result state is detached from caller-owned state', () => {
+  const initial = canonicalState();
+  const result = runEngineTransition({
+    state: initial,
+    command: { kind: 'TEST_REJECT' },
+    authoritativeInputs: {},
+    definition: {
+      ruleRefs: ['RULE-PROVENANCE'],
+      cardConservation: 'preserve',
+      apply() {
+        return { status: 'rejected', reason: 'ILLEGAL_TRANSITION' };
+      }
+    }
+  });
+
+  assert.equal(result.status, 'rejected');
+  initial.players[0].seat = 42;
+  assert.equal(result.state.players[0].seat, 0);
+});
+
 test('P4 replay is deterministic for the same initial state, commands, and authoritative inputs', () => {
   const initial = canonicalState();
   const steps = [
@@ -188,6 +208,46 @@ test('P4 canonical invariant validation rejects broken root-flow and continuatio
     resumeStageId: 'stage-2'
   }];
   assert.throws(() => validateCanonicalState(orphan), /continuation without an active root flow/);
+});
+
+test('P4 canonical invariant validation rejects dangling or mismatched deadline references', () => {
+  const danglingStage = canonicalState();
+  danglingStage.rootFlow = {
+    rootFlowId: 'root-1',
+    stage: {
+      stageId: 'stage-1',
+      eligibleParticipantIds: ['p1'],
+      acceptedSubmissions: [],
+      pendingParticipantIds: ['p1'],
+      deadlineId: 'deadline-missing',
+      completionPolicyRef: 'RULE-STAGE'
+    },
+    continuationIds: []
+  };
+  assert.throws(
+    () => validateCanonicalState(danglingStage),
+    /stage deadline deadline-missing is missing/
+  );
+
+  const mismatchedEffect = canonicalState();
+  mismatchedEffect.persistentEffects = [{
+    effectId: 'effect-1',
+    effectKind: 'test-effect',
+    sourceCardInstanceId: null,
+    subjectPlayerIds: ['p1'],
+    deadlineId: 'deadline-1',
+    audience: { kind: 'public' }
+  }];
+  mismatchedEffect.deadlines = [{
+    deadlineId: 'deadline-1',
+    dueAtEpochMs: 123,
+    owner: { kind: 'root-flow', refId: 'root-missing' },
+    audience: { kind: 'public' }
+  }];
+  assert.throws(
+    () => validateCanonicalState(mismatchedEffect),
+    /Deadline deadline-1 does not belong to persistent effect effect-1/
+  );
 });
 
 test('P4 winner ordering rejects declaration while required root-flow resolution remains active', () => {
