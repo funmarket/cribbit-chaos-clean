@@ -199,16 +199,19 @@ export function validateCanonicalState(state: CanonicalGameState): void {
     state.deadlines.map((deadline) => [deadline.deadlineId, deadline] as const)
   );
 
-  if (state.rootFlow?.stage.deadlineId !== null && state.rootFlow?.stage.deadlineId !== undefined) {
+  if (state.rootFlow !== null) {
     const stage = state.rootFlow.stage;
-    const deadline = deadlinesById.get(stage.deadlineId);
-    if (deadline === undefined) {
-      throw new Error(`Root-flow stage deadline ${stage.deadlineId} is missing`);
-    }
-    if (deadline.owner.kind !== 'stage' || deadline.owner.refId !== stage.stageId) {
-      throw new Error(
-        `Deadline ${stage.deadlineId} does not belong to root-flow stage ${stage.stageId}`
-      );
+    const stageDeadlineId = stage.deadlineId;
+    if (stageDeadlineId !== null) {
+      const deadline = deadlinesById.get(stageDeadlineId);
+      if (deadline === undefined) {
+        throw new Error(`Root-flow stage deadline ${stageDeadlineId} is missing`);
+      }
+      if (deadline.owner.kind !== 'stage' || deadline.owner.refId !== stage.stageId) {
+        throw new Error(
+          `Deadline ${stageDeadlineId} does not belong to root-flow stage ${stage.stageId}`
+        );
+      }
     }
   }
 
