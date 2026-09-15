@@ -1,9 +1,9 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { Pool } from 'pg';
 
 import * as database from '../packages/database/src/index.ts';
 import { createGameCommandService } from '../apps/api/src/main.ts';
+import { withIsolatedP6Database } from './postgres-test-harness.mjs';
 
 const connectionString = process.env.POSTGRES_URL;
 const dbTest = connectionString ? test : test.skip;
@@ -30,16 +30,7 @@ function canonicalState(revision = 7) {
 }
 
 async function withFreshDatabase(run) {
-  const pool = new Pool({ connectionString });
-  try {
-    await pool.query(`
-      drop table if exists game_deadline_jobs cascade;
-      drop table if exists game_outbox cascade;
-      drop table if exists accepted_command_receipts cascade;
-      drop table if exists game_session_memberships cascade;
-      drop table if exists game_sessions cascade;
-    `);
-    await database.applyP6Migration(pool);
+  return withIsolatedP6Database(connectionString, async (pool) => {
     await pool.query(
       'insert into game_sessions (session_id, canonical_state, revision) values ($1, $2::jsonb, $3)',
       ['session-1', JSON.stringify(canonicalState()), 7]
@@ -48,10 +39,8 @@ async function withFreshDatabase(run) {
       'insert into game_session_memberships (session_id, principal_id, player_id) values ($1, $2, $3)',
       ['session-1', 'principal-1', 'p1']
     );
-    return await run(pool);
-  } finally {
-    await pool.end();
-  }
+    return run(pool);
+  });
 }
 
 function receipt(commandId, fingerprint) {
