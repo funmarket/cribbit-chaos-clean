@@ -41,11 +41,25 @@ async function expectFailure(t, mutation, expected) {
   assert.match(`${result.stdout}\n${result.stderr}`, expected);
 }
 
+async function expectSuccess(t, mutation) {
+  const dir = await fixture();
+  t.after(() => rm(dir, { recursive: true, force: true }));
+  await mutation(dir);
+  const result = runCheck(dir);
+  assert.equal(result.status, 0, `${result.stdout}\n${result.stderr}`);
+}
+
 test('valid P1 skeleton passes architecture guard', async (t) => {
   const dir = await fixture();
   t.after(() => rm(dir, { recursive: true, force: true }));
   const result = runCheck(dir);
   assert.equal(result.status, 0, `${result.stdout}\n${result.stderr}`);
+});
+
+test('audited API implementation is allowed after the P5 server build gate', async (t) => {
+  await expectSuccess(t, async (d) => {
+    await mutate(d, 'apps/api/src/main.ts', `export const commandServiceBoundary = true;\n`);
+  });
 });
 
 const cases = [
@@ -68,7 +82,6 @@ const cases = [
   ['worker creation fails in client code', async (d) => mutate(d, 'packages/client-app/src/index.ts', (s) => `${s}\nnew Worker('/worker.js');\n`), /dynamic worker/],
   ['extra frontend source entry fails', async (d) => writeFile(path.join(d, 'apps/web/src/extra.ts'), 'export {};\n'), /exactly one source entry/],
   ['HTML shell injection fails', async (d) => mutate(d, 'apps/web/index.html', (s) => s.replace('<div id="app"></div>', '<button>bad</button><div id="app"></div>')), /HTML shell differs/],
-  ['API implementation before server audit fails', async (d) => mutate(d, 'apps/api/src/main.ts', `export const handler = () => 'not-authorized-in-P1';\n`), /server placeholder changed/],
   ['platform root export fails', async (d) => mutate(d, 'packages/platform/package.json', (s) => { const j = JSON.parse(s); j.exports['.'] = './src/types.ts'; return JSON.stringify(j, null, 2) + '\n'; }), /root export is forbidden/],
   ['platform types runtime implementation fails', async (d) => mutate(d, 'packages/platform/src/types.ts', (s) => `${s}export const runtime = true;\n`), /declarations only/],
   ['unresolved import fails', async (d) => mutate(d, 'packages/ui/src/index.ts', `import '@cribbit/contracts/nope';\n`), /unresolved import/],
