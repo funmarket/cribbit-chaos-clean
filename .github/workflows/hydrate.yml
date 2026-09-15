@@ -1,25 +1,30 @@
-name: Hydrate frozen P1
+name: P1 lockfile rebaseline
 on:
   push:
     branches: [main]
 permissions:
   contents: write
 jobs:
-  hydrate:
+  lockfile:
+    if: ${{ !contains(github.event.head_commit.message, 'chore: publish rebaselined package lock') }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Restore frozen P1 files
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - run: npm install --global npm@10.9.2
+      - name: Assert toolchain
         run: |
-          test -f .p1/remaining.tgz
-          tar -xzf .p1/remaining.tgz
-          rm -f .p1/remaining.tgz
-          rmdir .p1 2>/dev/null || true
-          rm -f .github/workflows/hydrate.yml
-      - name: Commit restored files
+          test "$(node -p "process.versions.node.split('.')[0]")" = "24"
+          test "$(npm --version)" = "10.9.2"
+      - name: Regenerate lockfile only
+        run: npm install --package-lock-only --ignore-scripts
+      - name: Publish lockfile
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add -A
-          git commit -m "chore: complete frozen P1 foundation"
+          git add package-lock.json
+          if git diff --cached --quiet; then exit 0; fi
+          git commit -m "chore: publish rebaselined package lock"
           git push
