@@ -15,7 +15,7 @@ async function fixture() {
     filter(source) {
       const relative = path.relative(ROOT, source).split(path.sep).join('/');
       if (!relative) return true;
-      return !['.git', 'node_modules', 'dist', 'artifacts', '.tmp-tests', '.p1'].some((blocked) => relative === blocked || relative.startsWith(`${blocked}/`));
+      return !['.git', 'node_modules', 'dist', 'artifacts', '.tmp-tests', '.p1', 'packages/cards/assets'].some((blocked) => relative === blocked || relative.startsWith(`${blocked}/`));
     }
   });
   await symlink(path.join(ROOT, 'node_modules'), path.join(dir, 'node_modules'), 'dir');
@@ -57,6 +57,7 @@ const cases = [
   ['web cannot import game engine', async (d) => mutate(d, 'apps/web/src/main.ts', (s) => `import '@cribbit/game-engine';\n${s}`), /forbidden workspace edge|client cannot import/],
   ['client cannot import server cards', async (d) => mutate(d, 'packages/client-app/src/index.ts', (s) => `import '@cribbit/cards/server';\n${s}`), /client cannot import server\/gameplay/],
   ['client cannot import server prompts', async (d) => mutate(d, 'packages/client-app/src/index.ts', (s) => `import '@cribbit/prompts/server';\n${s}`), /client cannot import server\/gameplay/],
+  ['client cannot construct canonical deck', async (d) => mutate(d, 'packages/client-app/src/index.ts', (s) => `${s}\nfunction buildDeck(){ return []; }\n`), /canonical deck constructor/],
   ['production edge requires declaration', async (d) => mutate(d, 'apps/web/package.json', (s) => { const j = JSON.parse(s); delete j.dependencies['@cribbit/platform']; return JSON.stringify(j, null, 2) + '\n'; }), /not declared/],
   ['dev dependency cannot justify production edge', async (d) => mutate(d, 'apps/web/package.json', (s) => { const j = JSON.parse(s); delete j.dependencies['@cribbit/platform']; j.devDependencies = { '@cribbit/platform': '0.0.0' }; return JSON.stringify(j, null, 2) + '\n'; }), /declared only in devDependencies/],
   ['unused forbidden internal dependency fails', async (d) => mutate(d, 'apps/web/package.json', (s) => { const j = JSON.parse(s); j.dependencies['@cribbit/game-engine'] = '0.0.0'; return JSON.stringify(j, null, 2) + '\n'; }), /forbidden internal dependency/],
