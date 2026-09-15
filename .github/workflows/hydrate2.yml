@@ -9,28 +9,29 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Map chunk overlaps
+      - name: Map segment identity
         shell: bash
         run: |
           set -eu
           python3 - <<'PY'
           from pathlib import Path
+          import hashlib
           files=sorted(Path('.p1/chunks').iterdir())
-          data=[p.read_text() for p in files]
-          for i,(p,s) in enumerate(zip(files,data)):
-              print(f'{p.name} len={len(s)} eq={s.count("=")} headers={s.count("H4sI")}')
-              if '=' in s:
-                  print(f'  first_eq={s.find("=")} last_eq={s.rfind("=")}')
-          for i in range(len(data)-1):
-              a,b=data[i],data[i+1]
-              best=0
-              limit=min(len(a),len(b))
-              for n in range(1,limit+1):
-                  if a[-n:]==b[:n]: best=n
-              print(f'overlap {files[i].name}->{files[i+1].name}: {best}')
-          for i,p in enumerate(files):
-              for j in range(i):
-                  pos=data[j].find(data[i])
-                  if pos>=0:
-                      print(f'{p.name} is contained in {files[j].name} at {pos}')
+          data={p.name:p.read_text() for p in files}
+          for name,s in data.items():
+              print(f'{name} len={len(s)} sha256={hashlib.sha256(s.encode()).hexdigest()[:16]}')
+              for off in range(0,len(s),8000):
+                  part=s[off:off+8000]
+                  print(f'  part off={off} len={len(part)} sha256={hashlib.sha256(part.encode()).hexdigest()[:16]} first={part[:8]} last={part[-8:]}')
+          names=list(data)
+          for needle_name in names:
+              needle=data[needle_name]
+              for hay_name in names:
+                  if needle_name==hay_name: continue
+                  start=0
+                  while True:
+                      pos=data[hay_name].find(needle,start)
+                      if pos<0: break
+                      print(f'CONTAINS {hay_name}[{pos}:{pos+len(needle)}] == {needle_name}')
+                      start=pos+1
           PY
