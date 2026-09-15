@@ -210,6 +210,46 @@ test('P4 canonical invariant validation rejects broken root-flow and continuatio
   assert.throws(() => validateCanonicalState(orphan), /continuation without an active root flow/);
 });
 
+test('P4 canonical invariant validation rejects dangling or mismatched deadline references', () => {
+  const danglingStage = canonicalState();
+  danglingStage.rootFlow = {
+    rootFlowId: 'root-1',
+    stage: {
+      stageId: 'stage-1',
+      eligibleParticipantIds: ['p1'],
+      acceptedSubmissions: [],
+      pendingParticipantIds: ['p1'],
+      deadlineId: 'deadline-missing',
+      completionPolicyRef: 'RULE-STAGE'
+    },
+    continuationIds: []
+  };
+  assert.throws(
+    () => validateCanonicalState(danglingStage),
+    /stage deadline deadline-missing is missing/
+  );
+
+  const mismatchedEffect = canonicalState();
+  mismatchedEffect.persistentEffects = [{
+    effectId: 'effect-1',
+    effectKind: 'test-effect',
+    sourceCardInstanceId: null,
+    subjectPlayerIds: ['p1'],
+    deadlineId: 'deadline-1',
+    audience: { kind: 'public' }
+  }];
+  mismatchedEffect.deadlines = [{
+    deadlineId: 'deadline-1',
+    dueAtEpochMs: 123,
+    owner: { kind: 'root-flow', refId: 'root-missing' },
+    audience: { kind: 'public' }
+  }];
+  assert.throws(
+    () => validateCanonicalState(mismatchedEffect),
+    /deadline deadline-1 does not belong to persistent effect effect-1/
+  );
+});
+
 test('P4 winner ordering rejects declaration while required root-flow resolution remains active', () => {
   const state = canonicalState();
   state.rootFlow = {
