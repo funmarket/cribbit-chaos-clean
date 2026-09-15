@@ -1,14 +1,15 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import path from 'node:path';
+import os from 'node:os';
 import { cp, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import { spawnSync } from 'node:child_process';
 
 const ROOT = process.cwd();
-const TMP_ROOT = path.join(ROOT, '.tmp-tests');
+const TMP_PREFIX = path.join(os.tmpdir(), 'cribbit-p1-architecture-');
 
 async function fixture() {
-  const dir = await mkdtemp(path.join(TMP_ROOT, 'architecture-'));
+  const dir = await mkdtemp(TMP_PREFIX);
   await cp(ROOT, dir, {
     recursive: true,
     filter(source) {
@@ -38,9 +39,6 @@ async function expectFailure(t, mutation, expected) {
   assert.notEqual(result.status, 0, `guard unexpectedly passed\n${result.stdout}\n${result.stderr}`);
   assert.match(`${result.stdout}\n${result.stderr}`, expected);
 }
-
-await rm(TMP_ROOT, { recursive: true, force: true });
-await import('node:fs/promises').then(({ mkdir }) => mkdir(TMP_ROOT, { recursive: true }));
 
 test('valid P1 skeleton passes architecture guard', async (t) => {
   const dir = await fixture();
