@@ -79,7 +79,8 @@ export const CLIENT_CAPABILITY_PATTERNS = Object.freeze([
   ['dynamic script creation', /createElement\s*\(\s*['"]script['"]\s*\)/],
   ['eval', /\beval\s*\(/],
   ['Function constructor', /\bnew\s+Function\s*\(/],
-  ['fallback runtime flag', /\b(?:runtimeMode|fallbackRuntime|offlineRuntime)\b/]
+  ['fallback runtime flag', /\b(?:runtimeMode|fallbackRuntime|offlineRuntime)\b/],
+  ['canonical deck constructor', /\b(?:buildDeck|buildCanonicalDeck|createCanonicalDeck)\b/]
 ]);
 
 export const P1_SERVER_PLACEHOLDER = '// P1 server boundary only. No HTTP listener, authentication or game mutations.\nexport {};\n';
