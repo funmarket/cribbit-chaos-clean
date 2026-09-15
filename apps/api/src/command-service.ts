@@ -53,8 +53,9 @@ export function createGameCommandService(
           );
           if (priorReceipt !== null) {
             if (
-              priorReceipt.commandFingerprint !==
-              input.envelope.commandFingerprint
+              priorReceipt.commandFingerprint !== input.envelope.commandFingerprint ||
+              priorReceipt.actorPlayerId !== membership.playerId ||
+              priorReceipt.sessionId !== input.envelope.sessionId
             ) {
               return { status: 'rejected', code: 'COMMAND_ID_CONFLICT' } as const;
             }
