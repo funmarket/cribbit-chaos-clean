@@ -28,6 +28,9 @@
       "@cribbit/game-engine": [
         "packages/game-engine/src/index.ts"
       ],
+      "@cribbit/database": [
+        "packages/database/src/index.ts"
+      ],
       "@cribbit/api-client": [
         "packages/api-client/src/index.ts"
       ],
