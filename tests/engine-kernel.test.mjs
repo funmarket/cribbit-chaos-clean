@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { readFile } from 'node:fs/promises';
+import { readFile, readdir } from 'node:fs/promises';
 
 import {
   replayEngineTransitions,
@@ -36,7 +36,10 @@ function moveTopDrawDefinition() {
   return {
     ruleRefs: ['RULE-PROVENANCE'],
     cardConservation: 'preserve',
-    apply({ state, authoritativeInputs }) {
+    apply({ state, command, authoritativeInputs }) {
+      state.players[0].seat = 99;
+      if (command.nested) command.nested.value = 'handler-mutated';
+      if (authoritativeInputs.nested) authoritativeInputs.nested.value = 'handler-mutated';
       const [card, ...remaining] = state.zones.drawPile;
       return {
         status: 'accepted',
@@ -54,7 +57,7 @@ function moveTopDrawDefinition() {
   };
 }
 
-test('P4 kernel applies an accepted transition without mutating caller inputs and owns the revision increment', () => {
+test('P4 kernel isolates caller state, command, and authoritative inputs while owning revision increment', () => {
   const initial = canonicalState();
   const command = { kind: 'TEST_MOVE_CARD', nested: { value: 'keep' } };
   const authoritativeInputs = { nonce: 'fixed-input', nested: { value: 'keep' } };
@@ -69,6 +72,7 @@ test('P4 kernel applies an accepted transition without mutating caller inputs an
 
   assert.equal(result.status, 'accepted');
   assert.equal(result.state.revision, 8);
+  assert.equal(result.state.players[0].seat, 99);
   assert.deepEqual(result.state.zones.drawPile, ['card-b']);
   assert.deepEqual(result.state.zones.discardPile, ['card-c', 'card-a']);
   assert.deepEqual(result.effects, [
@@ -87,7 +91,8 @@ test('P4 rejected transitions preserve canonical state and revision', () => {
     definition: {
       ruleRefs: ['RULE-PROVENANCE'],
       cardConservation: 'preserve',
-      apply() {
+      apply({ state }) {
+        state.players[0].seat = 99;
         return { status: 'rejected', reason: 'ILLEGAL_TRANSITION' };
       }
     }
@@ -99,6 +104,7 @@ test('P4 rejected transitions preserve canonical state and revision', () => {
     reason: 'ILLEGAL_TRANSITION',
     ruleRefs: ['RULE-PROVENANCE']
   });
+  assert.equal(initial.players[0].seat, 0);
 });
 
 test('P4 replay is deterministic for the same initial state, commands, and authoritative inputs', () => {
@@ -221,8 +227,15 @@ test('P4 executable transition definitions require explicit approved provenance 
   );
 });
 
-test('P4 kernel source has no transport, persistence, platform, clock, or random authority', async () => {
-  const source = await readFile('packages/game-engine/src/kernel.ts', 'utf8');
+test('P4 game-engine source has no transport, persistence, platform, clock, or random authority', async () => {
+  const entries = await readdir('packages/game-engine/src', { recursive: true });
+  const sourceFiles = entries.filter((entry) => entry.endsWith('.ts'));
+  const source = (
+    await Promise.all(
+      sourceFiles.map((entry) => readFile(`packages/game-engine/src/${entry}`, 'utf8'))
+    )
+  ).join('\n');
+
   assert.doesNotMatch(source, /\bfetch\s*\(|\bWebSocket\b|\bXMLHttpRequest\b/);
   assert.doesNotMatch(source, /Telegram|initData|prisma|postgres|database/i);
   assert.doesNotMatch(source, /\b(?:localStorage|sessionStorage|indexedDB)\b/);
