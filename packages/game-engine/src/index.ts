@@ -1,2 +1,3 @@
-// P1 boundary placeholder. No gameplay or UI implementation.
-export {};
+// P3 server-owned canonical state and recipient projection surface.
+export * from './state.ts';
+export * from './projection.ts';
