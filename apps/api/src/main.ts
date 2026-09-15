@@ -1,2 +1,13 @@
-// P1 server boundary only. No HTTP listener, authentication or game mutations.
-export {};
+export { createGameCommandService } from './command-service.ts';
+export type { GameCommandService } from './command-service.ts';
+export type {
+  AcceptedCommit,
+  AuthenticatedPrincipal,
+  AuthenticationPort,
+  CommandSessionTransaction,
+  CommandTransactionPort,
+  EngineCommandResolver,
+  GameCommandServicePorts,
+  ResolvedEngineCommand,
+  SessionMembership
+} from './ports.ts';
