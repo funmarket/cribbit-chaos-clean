@@ -14,3 +14,8 @@ export type {
   DatabaseOutboxProjectionSource,
   DatabaseOutboxStore
 } from './postgres-outbox-store.ts';
+export { createPostgresDeadlineStore } from './postgres-deadline-store.ts';
+export type {
+  DatabaseDeadlineJobClaim,
+  DatabaseDeadlineStore
+} from './postgres-deadline-store.ts';
