@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import path from 'node:path';
 import os from 'node:os';
-import { cp, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
+import { cp, mkdtemp, readFile, rm, symlink, writeFile } from 'node:fs/promises';
 import { spawnSync } from 'node:child_process';
 
 const ROOT = process.cwd();
@@ -18,6 +18,7 @@ async function fixture() {
       return !['.git', 'node_modules', 'dist', 'artifacts', '.tmp-tests', '.p1'].some((blocked) => relative === blocked || relative.startsWith(`${blocked}/`));
     }
   });
+  await symlink(path.join(ROOT, 'node_modules'), path.join(dir, 'node_modules'), 'dir');
   return dir;
 }
 
