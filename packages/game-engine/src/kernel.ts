@@ -277,7 +277,7 @@ export function runEngineTransition<
   if (proposed.status === 'rejected') {
     return {
       status: 'rejected',
-      state: input.state,
+      state: structuredClone(input.state),
       reason: proposed.reason,
       ruleRefs: [...input.definition.ruleRefs]
     };
