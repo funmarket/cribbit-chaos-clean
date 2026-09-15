@@ -14,7 +14,7 @@
   "scripts": {
     "typecheck": "tsc --noEmit",
     "architecture:check": "node tools/architecture/check.mjs",
-    "test": "node --test tests/architecture.test.mjs",
+    "test": "node --test tests/*.test.mjs",
     "build:web": "node tools/build.mjs web",
     "build:telegram": "node tools/build.mjs telegram",
     "build:api": "node tools/build.mjs api",
