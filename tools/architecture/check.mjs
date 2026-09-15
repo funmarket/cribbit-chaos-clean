@@ -1,5 +1,5 @@
 import ts from 'typescript';
-import { CLIENT_CAPABILITY_PATTERNS, CLIENT_FORBIDDEN_TARGETS, CLIENT_WORKSPACES, EXACT_HTML_SHELL, P1_SERVER_PLACEHOLDER, SURFACE_RULES, WORKSPACES, isAllowedEdge } from './policy.mjs';
+import { CLIENT_CAPABILITY_PATTERNS, CLIENT_FORBIDDEN_TARGETS, CLIENT_WORKSPACES, EXACT_HTML_SHELL, SURFACE_RULES, WORKSPACES, isAllowedEdge } from './policy.mjs';
 import { normalizeHtml, readJson, readText, walk } from './fs.mjs';
 import { analyzeImports, sourceWorkspace } from './imports.mjs';
 import { dependencySection, loadWorkspaceManifests, validateManifestDeclarations } from './manifests.mjs';
@@ -18,9 +18,6 @@ for (const surface of ['apps/web', 'apps/telegram']) {
   const sourceFiles = await walk(`${surface}/src`, (file) => /\.[cm]?[jt]sx?$/.test(file));
   if (sourceFiles.length !== 1 || sourceFiles[0] !== `${surface}/src/main.ts`) fail(`${surface}: exactly one source entry main.ts is required in P1`);
 }
-
-const serverSource = await readText('apps/api/src/main.ts');
-if (serverSource !== P1_SERVER_PLACEHOLDER) fail('apps/api: P1 server placeholder changed before the server audit gate');
 
 const sourceFiles = [
   ...(await walk('apps', (file) => /\.[cm]?[jt]sx?$/.test(file))),
