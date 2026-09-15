@@ -139,7 +139,8 @@ export function validateCanonicalState(state: CanonicalGameState): void {
       throw new Error('Canonical state contains a continuation without an active root flow');
     }
   } else {
-    const { rootFlow, stage } = state.rootFlow;
+    const rootFlow = state.rootFlow;
+    const stage = rootFlow.stage;
     assertUnique(rootFlow.continuationIds, 'root-flow continuation ID');
     assertUnique(stage.eligibleParticipantIds, 'eligible participant ID');
     assertUnique(stage.pendingParticipantIds, 'pending participant ID');
