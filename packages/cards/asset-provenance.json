@@ -1,0 +1,29 @@
+{
+  "specId": "CHAOS-133-V1",
+  "source": {
+    "repository": "funmarket/cribbit-chaos",
+    "commit": "77c455901516205633eb15e96f51a84206eb8174",
+    "tree": "84d791d4c7f06aa519cee82da0b3bbe35ab5fe55",
+    "assetTreeBlob": "be36e2003403335375871ec4bfdb84c255290da9",
+    "deckManifestBlob": "b6e5143d58d83a4742356d7e31cb1022330f4326"
+  },
+  "cardBack": {
+    "path": "assets/CHAOS-133-V1/backs/card_back.jpg",
+    "sourceBlob": "3a388f7f141b94615ebfefc35e5fd58963aada3b",
+    "bytes": 197959
+  },
+  "limeOneSharedArtwork": {
+    "definitionId": "number_lime_1",
+    "asset": "assets/CHAOS-133-V1/cards/numbers/lime/number_lime_1_01.jpg",
+    "sourceBlob": "bcce6f66145751f12fd63ee4dc644ff945c03de2",
+    "bytes": 133653,
+    "sha256": "de80a9104d8635a72c17aff20545cd34b946e3c2513da1a15d1609cd91a53a32",
+    "physicalInstances": ["number_lime_1_01", "number_lime_1_02"]
+  },
+  "excludedBrokenSourceAsset": {
+    "path": "cards/numbers/lime/number_lime_1_02.jpg",
+    "sourceBlob": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391",
+    "bytes": 0,
+    "reason": "The second physical Lime 1 instance shares the approved nonempty Lime 1 artwork instead of preserving the zero-byte source placeholder."
+  }
+}
