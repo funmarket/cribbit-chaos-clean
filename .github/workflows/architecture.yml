@@ -1,7 +1,7 @@
 name: Foundation architecture
 on: [push, pull_request]
 permissions:
-  contents: write
+  contents: read
 jobs:
   foundation:
     runs-on: ubuntu-latest
@@ -32,18 +32,6 @@ jobs:
         run: |
           test "$(node -p "process.versions.node.split('.')[0]")" = "24"
           test "$(npm --version)" = "10.9.2"
-      - name: Generate P6 lockfile
-        run: npm install --package-lock-only --ignore-scripts
-      - name: Persist generated P6 lockfile
-        if: github.event_name == 'push' && github.ref == 'refs/heads/phase/p6-persistence-outbox-realtime-deadlines'
-        run: |
-          if ! git diff --quiet -- package-lock.json; then
-            git config user.name "github-actions[bot]"
-            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-            git add package-lock.json
-            git commit -m "chore(p6): regenerate package lock"
-            git push origin HEAD:phase/p6-persistence-outbox-realtime-deadlines
-          fi
       - run: npm ci
       - run: npm run verify
       - uses: actions/upload-artifact@v4
