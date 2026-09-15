@@ -69,10 +69,10 @@ dbTest('P6 serializes concurrent writers so only one commit from the same expect
     const transactions = database.createPostgresCommandTransactionPort(pool);
 
     const attempt = (commandId, fingerprint) => transactions.withSession('session-1', async (tx) => {
-      const state = await tx.loadCanonicalState();
+      await tx.loadCanonicalState();
       await tx.commitAccepted({
-        expectedRevision: state.revision,
-        nextState: canonicalState(state.revision + 1),
+        expectedRevision: 7,
+        nextState: canonicalState(8),
         receipt: receipt(commandId, fingerprint)
       });
       return commandId;
