@@ -6,7 +6,6 @@ permissions:
   contents: write
 jobs:
   lockfile:
-    if: ${{ !contains(github.event.head_commit.message, 'chore: publish rebaselined package lock') }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -20,7 +19,7 @@ jobs:
           test "$(npm --version)" = "10.9.2"
       - name: Regenerate lockfile only
         run: npm install --package-lock-only --ignore-scripts
-      - name: Publish lockfile
+      - name: Publish lockfile when changed
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
