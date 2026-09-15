@@ -107,6 +107,26 @@ test('P4 rejected transitions preserve canonical state and revision', () => {
   assert.equal(initial.players[0].seat, 0);
 });
 
+test('P4 rejected transition result state is detached from caller-owned state', () => {
+  const initial = canonicalState();
+  const result = runEngineTransition({
+    state: initial,
+    command: { kind: 'TEST_REJECT' },
+    authoritativeInputs: {},
+    definition: {
+      ruleRefs: ['RULE-PROVENANCE'],
+      cardConservation: 'preserve',
+      apply() {
+        return { status: 'rejected', reason: 'ILLEGAL_TRANSITION' };
+      }
+    }
+  });
+
+  assert.equal(result.status, 'rejected');
+  initial.players[0].seat = 42;
+  assert.equal(result.state.players[0].seat, 0);
+});
+
 test('P4 replay is deterministic for the same initial state, commands, and authoritative inputs', () => {
   const initial = canonicalState();
   const steps = [
