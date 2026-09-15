@@ -5,7 +5,9 @@ import type {
 import {
   projectGameState,
   runEngineTransition,
-  type PlayerGameProjection
+  type CanonicalGameState,
+  type PlayerGameProjection,
+  type PlayerId
 } from '@cribbit/game-engine';
 
 import type { GameCommandServicePorts } from './ports.ts';
@@ -15,6 +17,17 @@ export interface GameCommandService {
     readonly authInput: unknown;
     readonly envelope: GameCommandEnvelope;
   }): Promise<CommandServiceResult<PlayerGameProjection>>;
+}
+
+function projectPlayerState(
+  state: CanonicalGameState,
+  playerId: PlayerId
+): PlayerGameProjection {
+  const projection = projectGameState(state, { kind: 'player', playerId });
+  if (projection.audience.kind !== 'player') {
+    throw new Error('Player command projection resolved to a non-player audience');
+  }
+  return projection;
 }
 
 export function createGameCommandService(
@@ -49,10 +62,7 @@ export function createGameCommandService(
             return {
               status: 'accepted',
               receipt: priorReceipt,
-              projection: projectGameState(currentState, {
-                kind: 'player',
-                playerId: membership.playerId
-              })
+              projection: projectPlayerState(currentState, membership.playerId)
             } as const;
           }
 
@@ -102,10 +112,7 @@ export function createGameCommandService(
           return {
             status: 'accepted',
             receipt,
-            projection: projectGameState(transition.state, {
-              kind: 'player',
-              playerId: membership.playerId
-            })
+            projection: projectPlayerState(transition.state, membership.playerId)
           } as const;
         }
       );
