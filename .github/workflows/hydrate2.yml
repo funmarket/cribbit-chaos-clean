@@ -9,29 +9,32 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Map segment identity
+      - name: Verify salvageable archive content
         shell: bash
         run: |
-          set -eu
-          python3 - <<'PY'
-          from pathlib import Path
-          import hashlib
-          files=sorted(Path('.p1/chunks').iterdir())
-          data={p.name:p.read_text() for p in files}
-          for name,s in data.items():
-              print(f'{name} len={len(s)} sha256={hashlib.sha256(s.encode()).hexdigest()[:16]}')
-              for off in range(0,len(s),8000):
-                  part=s[off:off+8000]
-                  print(f'  part off={off} len={len(part)} sha256={hashlib.sha256(part.encode()).hexdigest()[:16]} first={part[:8]} last={part[-8:]}')
-          names=list(data)
-          for needle_name in names:
-              needle=data[needle_name]
-              for hay_name in names:
-                  if needle_name==hay_name: continue
-                  start=0
-                  while True:
-                      pos=data[hay_name].find(needle,start)
-                      if pos<0: break
-                      print(f'CONTAINS {hay_name}[{pos}:{pos+len(needle)}] == {needle_name}')
-                      start=pos+1
-          PY
+          set -u
+          mkdir -p /tmp/p1-out
+          gzip -dc .p1/remaining.tgz > /tmp/p1.tar || true
+          echo "compressed_bytes=$(wc -c < .p1/remaining.tgz)"
+          echo "tar_bytes=$(wc -c < /tmp/p1.tar)"
+          tar -tf /tmp/p1.tar || true
+          tar -xf /tmp/p1.tar -C /tmp/p1-out || true
+          for spec in \
+            'docs/rule-provenance.json 2722560cb96ad2a1d8b6dc667431cf8bbe75c5a9' \
+            'gamerules.md 139bd96b7ddc01825bdec80cb319a04db94ac8a2' \
+            'package-lock.json 41f91b59dc1314f9b6f1a976220139fe314e6a96' \
+            'tests/architecture.test.mjs 4e581dd7d2987bbe9d7846f8817518a6e3a3f9d2' \
+            'tools/architecture/check.mjs 5e067c104f57429cb92b45be3ad97f359860ac69' \
+            'tools/architecture/policy.mjs 689b495fa860a84467bf1b89422d0960eac50c98' \
+            'tools/build.mjs 2917df2934e002253364a785a8aca23c9fbaa62d'
+          do
+            set -- $spec
+            path=$1
+            expected=$2
+            if [ -f "/tmp/p1-out/$path" ]; then
+              actual=$(git hash-object "/tmp/p1-out/$path")
+              echo "$path expected=$expected actual=$actual"
+            else
+              echo "$path MISSING"
+            fi
+          done
