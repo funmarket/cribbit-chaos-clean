@@ -11,8 +11,10 @@ jobs:
       - uses: actions/checkout@v4
       - name: Restore and verify frozen P1 files
         run: |
-          cat .p1/chunks/* | tr -cd 'A-Za-z0-9+/=' > /tmp/p1.b64
-          base64 -d /tmp/p1.b64 > /tmp/p1.tgz
+          : > /tmp/p1.tgz
+          for f in .p1/chunks/*; do
+            tr -cd 'A-Za-z0-9+/=' < "$f" | base64 -d >> /tmp/p1.tgz
+          done
           tar -xzf /tmp/p1.tgz
           test "$(git hash-object docs/rule-provenance.json)" = "2722560cb96ad2a1d8b6dc667431cf8bbe75c5a9"
           test "$(git hash-object gamerules.md)" = "139bd96b7ddc01825bdec80cb319a04db94ac8a2"
