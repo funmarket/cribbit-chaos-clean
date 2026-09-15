@@ -24,7 +24,7 @@ function projectPlayerState(
   playerId: PlayerId
 ): PlayerGameProjection {
   const projection = projectGameState(state, { kind: 'player', playerId });
-  if (projection.audience.kind !== 'player') {
+  if (!('private' in projection)) {
     throw new Error('Player command projection resolved to a non-player audience');
   }
   return projection;
