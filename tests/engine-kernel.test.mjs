@@ -246,7 +246,7 @@ test('P4 canonical invariant validation rejects dangling or mismatched deadline 
   }];
   assert.throws(
     () => validateCanonicalState(mismatchedEffect),
-    /deadline deadline-1 does not belong to persistent effect effect-1/
+    /Deadline deadline-1 does not belong to persistent effect effect-1/
   );
 });
 
