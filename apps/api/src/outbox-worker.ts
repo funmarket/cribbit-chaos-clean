@@ -1,5 +1,3 @@
-import { randomUUID } from 'node:crypto';
-
 import {
   projectGameState,
   type CanonicalGameState,
@@ -66,10 +64,9 @@ function publicationId(outboxId: string, recipient: ProjectionRecipient): string
 export function createOutboxWorker(input: {
   readonly store: OutboxStorePort;
   readonly publisher: RealtimePublisherPort;
-  readonly leaseTokenFactory?: () => string;
+  readonly leaseTokenFactory: () => string;
   readonly leaseDurationMs?: number;
 }): OutboxWorker {
-  const leaseTokenFactory = input.leaseTokenFactory ?? randomUUID;
   const leaseDurationMs = input.leaseDurationMs ?? 30_000;
 
   if (!Number.isInteger(leaseDurationMs) || leaseDurationMs <= 0) {
@@ -78,7 +75,7 @@ export function createOutboxWorker(input: {
 
   return {
     async runOnce() {
-      const leaseToken = leaseTokenFactory();
+      const leaseToken = input.leaseTokenFactory();
       const claim = await input.store.claimNext({ leaseToken, leaseDurationMs });
       if (claim === null) return { status: 'idle' };
       if (claim.leaseToken !== leaseToken) {
