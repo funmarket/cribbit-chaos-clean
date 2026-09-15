@@ -9,6 +9,12 @@ export type {
   RealtimePublication,
   RealtimePublisherPort
 } from './outbox-worker.ts';
+export { createDeadlineWorker } from './deadline-worker.ts';
+export type {
+  DeadlineJobClaim,
+  DeadlineStorePort,
+  DeadlineWorker
+} from './deadline-worker.ts';
 export type {
   AcceptedCommit,
   AuthenticatedPrincipal,
