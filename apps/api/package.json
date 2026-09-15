@@ -2,5 +2,9 @@
   "name": "@cribbit/api",
   "version": "0.0.0",
   "private": true,
-  "type": "module"
+  "type": "module",
+  "dependencies": {
+    "@cribbit/contracts": "0.0.0",
+    "@cribbit/game-engine": "0.0.0"
+  }
 }
