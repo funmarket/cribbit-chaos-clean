@@ -19,3 +19,4 @@ export type {
   DatabaseDeadlineJobClaim,
   DatabaseDeadlineStore
 } from './postgres-deadline-store.ts';
+export { checkPostgresConnection } from './postgres-health.ts';
