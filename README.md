@@ -13,7 +13,7 @@ npm run verify
 
 `verify` runs typechecking, source/entry/export/manifest/platform guards, adversarial guard tests and builds of both frontends and the empty API boundary. Production bundles are written to `dist`; resolved source and emitted module reports are written to `artifacts`. CI uploads those graph reports. No deployment is configured. Cloudflare/Railway/PostgreSQL remain the intended future infrastructure.
 
-Read [structure.md](structure.md), [requirements.md](requirements.md), [gamerules.md](gamerules.md), [decisions](docs/decisions.md) and [testing](docs/testing.md). Rule IDs preserve the supplied source. This README does not define gameplay.
+Read [structure.md](structure.md), [requirements.md](requirements.md), [gamerules.md](gamerules.md), [recovery charter](docs/recovery-charter.md), [decisions](docs/decisions.md) and [testing](docs/testing.md). Rule IDs preserve the supplied source. This README does not define gameplay.
 
 Canonical starting inventory: CHAOS-133-V1, **133 physical cards, 19 families**. No deck constructor or card UI is implemented in P1. Physical-copy identity is distinct from artwork identity. Both Lime 1 copies use approved `number_lime_1_01.jpg` through `number_lime_1`; no new artwork is needed.
 
