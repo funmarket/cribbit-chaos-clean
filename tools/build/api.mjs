@@ -17,13 +17,18 @@ const postgresRuntimePackages = [
   /^pg(?:-|$)/,
   'pgpass',
   /^postgres-/,
-  'split2'
+  'split2',
+  /^xtend(?:\/|$)/
 ];
 const allowedNodeRuntimeImports = new Set([
   'crypto',
   'dns',
   'events',
+  'fs',
   'net',
+  'path',
+  'stream',
+  'string_decoder',
   'tls',
   'util',
   'util/types'
