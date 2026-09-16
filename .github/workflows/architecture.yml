@@ -32,6 +32,15 @@ jobs:
         run: |
           test "$(node -p "process.versions.node.split('.')[0]")" = "24"
           test "$(npm --version)" = "10.9.2"
+      - name: Generate P6.5 dependency lock artifact
+        if: github.ref == 'refs/heads/phase/p6.5-cloud-infrastructure-bootstrap'
+        run: npm install --package-lock-only --ignore-scripts
+      - name: Upload P6.5 dependency lock artifact
+        if: github.ref == 'refs/heads/phase/p6.5-cloud-infrastructure-bootstrap'
+        uses: actions/upload-artifact@v4
+        with:
+          name: p6-5-package-lock
+          path: package-lock.json
       - run: npm ci
       - run: npm run verify
       - uses: actions/upload-artifact@v4
