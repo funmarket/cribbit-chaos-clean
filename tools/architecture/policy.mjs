@@ -5,6 +5,7 @@ export const WORKSPACES = Object.freeze({
   '@cribbit/cards': 'packages/cards',
   '@cribbit/prompts': 'packages/prompts',
   '@cribbit/game-engine': 'packages/game-engine',
+  '@cribbit/database': 'packages/database',
   '@cribbit/api-client': 'packages/api-client',
   '@cribbit/platform': 'packages/platform',
   '@cribbit/ui': 'packages/ui',
@@ -19,13 +20,14 @@ export const ALLOWED_EDGES = Object.freeze({
   '@cribbit/cards': ['@cribbit/contracts'],
   '@cribbit/prompts': ['@cribbit/contracts'],
   '@cribbit/game-engine': ['@cribbit/contracts', '@cribbit/cards', '@cribbit/prompts'],
+  '@cribbit/database': ['@cribbit/contracts', '@cribbit/game-engine'],
   '@cribbit/api-client': ['@cribbit/contracts'],
   '@cribbit/platform': ['@cribbit/contracts'],
   '@cribbit/ui': ['@cribbit/contracts', '@cribbit/cards'],
   '@cribbit/client-app': ['@cribbit/contracts', '@cribbit/api-client', '@cribbit/ui', '@cribbit/platform'],
   '@cribbit/web': ['@cribbit/client-app', '@cribbit/platform'],
   '@cribbit/telegram': ['@cribbit/client-app', '@cribbit/platform'],
-  '@cribbit/api': ['@cribbit/contracts', '@cribbit/game-engine', '@cribbit/cards', '@cribbit/prompts']
+  '@cribbit/api': ['@cribbit/contracts', '@cribbit/game-engine', '@cribbit/cards', '@cribbit/prompts', '@cribbit/database']
 });
 
 export const PRODUCTION_DEPENDENCY_SECTIONS = Object.freeze([
@@ -49,6 +51,7 @@ export const CLIENT_WORKSPACES = Object.freeze([
 
 export const CLIENT_FORBIDDEN_TARGETS = Object.freeze([
   '@cribbit/game-engine',
+  '@cribbit/database',
   '@cribbit/cards/server',
   '@cribbit/prompts/server'
 ]);

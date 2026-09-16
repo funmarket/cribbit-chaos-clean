@@ -5,6 +5,7 @@
   "type": "module",
   "dependencies": {
     "@cribbit/contracts": "0.0.0",
+    "@cribbit/database": "0.0.0",
     "@cribbit/game-engine": "0.0.0"
   }
 }

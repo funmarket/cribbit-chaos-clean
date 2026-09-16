@@ -1,0 +1,17 @@
+{
+  "name": "@cribbit/database",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "dependencies": {
+    "@cribbit/contracts": "0.0.0",
+    "@cribbit/game-engine": "0.0.0",
+    "pg": "8.23.0"
+  },
+  "devDependencies": {
+    "@types/pg": "8.23.1"
+  }
+}
