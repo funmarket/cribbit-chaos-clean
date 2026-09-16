@@ -1,0 +1,6 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "cribbit-chaos-clean",
+  "compatibility_date": "2026-09-16",
+  "main": "dist/api/main.js"
+}

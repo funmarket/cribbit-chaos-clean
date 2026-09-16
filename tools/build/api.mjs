@@ -13,7 +13,7 @@ const aliases = {
 };
 
 export async function buildApi() {
-  const entry = path.join(ROOT, 'apps/api/src/main.ts');
+  const entry = path.join(ROOT, 'apps/api/src/worker.ts');
   const outDir = path.join(ROOT, 'dist/api');
   await rm(outDir, { recursive: true, force: true });
 

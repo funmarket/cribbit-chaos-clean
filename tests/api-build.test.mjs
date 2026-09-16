@@ -12,6 +12,7 @@ test('P5 API build audits a real production module graph', async () => {
   const graph = JSON.parse(await readFile('artifacts/api-graph.json', 'utf8'));
   assert.equal(graph.surface, 'api');
   assert.deepEqual(graph.entries, ['main.js']);
+  assert.ok(graph.modules.includes('apps/api/src/worker.ts'));
   assert.ok(graph.modules.includes('apps/api/src/main.ts'));
   assert.ok(graph.modules.includes('apps/api/src/command-service.ts'));
   assert.ok(graph.modules.includes('packages/game-engine/src/kernel.ts'));
