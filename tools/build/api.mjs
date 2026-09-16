@@ -13,6 +13,22 @@ const aliases = {
   '@cribbit/prompts/server': path.join(ROOT, 'packages/prompts/src/server.ts')
 };
 
+const postgresRuntimePackages = [
+  /^pg(?:-|$)/,
+  'pgpass',
+  /^postgres-/,
+  'split2'
+];
+const allowedNodeRuntimeImports = new Set([
+  'crypto',
+  'dns',
+  'events',
+  'net',
+  'tls',
+  'util',
+  'util/types'
+]);
+
 export async function buildApi() {
   const entry = path.join(ROOT, 'apps/api/src/main.ts');
   const outDir = path.join(ROOT, 'dist/api');
@@ -21,7 +37,7 @@ export async function buildApi() {
   const result = await build({
     configFile: false,
     resolve: { alias: aliases },
-    ssr: { noExternal: ['pg'] },
+    ssr: { noExternal: postgresRuntimePackages },
     build: {
       ssr: entry,
       outDir,
@@ -39,12 +55,24 @@ export async function buildApi() {
   const modules = [...new Set(chunks.flatMap((chunk) => Object.keys(chunk.modules)).map((id) => path.relative(ROOT, id).split(path.sep).join('/')))];
   const emittedNames = new Set(chunks.map((chunk) => chunk.fileName));
   const externalImports = chunks.flatMap((chunk) => chunk.imports.filter((item) => !emittedNames.has(item)));
-  if (externalImports.length) throw new Error(`api: unexpected external runtime imports: ${externalImports.join(', ')}`);
+  const unexpectedExternalImports = externalImports.filter((item) => !allowedNodeRuntimeImports.has(item));
+  if (unexpectedExternalImports.length) {
+    throw new Error(`api: unexpected external runtime imports: ${unexpectedExternalImports.join(', ')}`);
+  }
 
   await mkdir(path.join(ROOT, 'artifacts'), { recursive: true });
   await writeFile(
     path.join(ROOT, 'artifacts/api-graph.json'),
-    JSON.stringify({ surface: 'api', entries: entries.map((entryChunk) => entryChunk.fileName), modules: modules.sort() }, null, 2) + '\n'
+    JSON.stringify(
+      {
+        surface: 'api',
+        entries: entries.map((entryChunk) => entryChunk.fileName),
+        modules: modules.sort(),
+        externalRuntimeImports: [...new Set(externalImports)].sort()
+      },
+      null,
+      2
+    ) + '\n'
   );
   return { surface: 'api', modules: modules.length };
 }
