@@ -18,7 +18,6 @@
     "build:web": "node tools/build.mjs web",
     "build:telegram": "node tools/build.mjs telegram",
     "build:api": "node tools/build.mjs api",
-    "build:cloudflare": "wrangler deploy --dry-run --config apps/api/wrangler.jsonc --env staging --outdir dist/cloudflare",
     "build": "npm run build:web && npm run build:telegram && npm run build:api",
     "verify": "npm run typecheck && npm run architecture:check && npm test && npm run build"
   },

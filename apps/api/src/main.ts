@@ -1,6 +1,18 @@
-import { cloudflareApiWorker } from './cloudflare-runtime.ts';
+import { createServer } from 'node:http';
+import { checkPostgresConnection } from '@cribbit/database';
+import { createNodeApiHandler } from './node-runtime.ts';
 
-export default cloudflareApiWorker;
+const port = Number(process.env.PORT ?? '3000');
+if (!Number.isInteger(port) || port <= 0 || port > 65535) {
+  throw new Error('PORT must be an integer between 1 and 65535');
+}
+
+createServer(
+  createNodeApiHandler({
+    databaseUrl: process.env.DATABASE_URL ?? '',
+    checkConnection: checkPostgresConnection
+  })
+).listen(port, '0.0.0.0');
 
 export { createGameCommandService } from './command-service.ts';
 export type { GameCommandService } from './command-service.ts';
