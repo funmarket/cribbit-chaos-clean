@@ -95,3 +95,7 @@ export function workspaceNameFromSpecifier(specifier) {
 export function isAllowedEdge(from, to) {
   return from === to || (ALLOWED_EDGES[from] ?? []).includes(to);
 }
+
+export function isAllowedNodeBuiltinImport(from, specifier) {
+  return from === '@cribbit/api' && specifier.startsWith('node:');
+}

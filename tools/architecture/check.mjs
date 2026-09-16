@@ -1,5 +1,5 @@
 import ts from 'typescript';
-import { CLIENT_CAPABILITY_PATTERNS, CLIENT_FORBIDDEN_TARGETS, CLIENT_WORKSPACES, EXACT_HTML_SHELL, SURFACE_RULES, WORKSPACES, isAllowedEdge } from './policy.mjs';
+import { CLIENT_CAPABILITY_PATTERNS, CLIENT_FORBIDDEN_TARGETS, CLIENT_WORKSPACES, EXACT_HTML_SHELL, SURFACE_RULES, WORKSPACES, isAllowedEdge, isAllowedNodeBuiltinImport } from './policy.mjs';
 import { normalizeHtml, readJson, readText, walk } from './fs.mjs';
 import { analyzeImports, sourceWorkspace } from './imports.mjs';
 import { dependencySection, loadWorkspaceManifests, validateManifestDeclarations } from './manifests.mjs';
@@ -37,6 +37,10 @@ for (const file of sourceFiles) {
   }
 
   for (const edge of analysis.edges) {
+    if (edge.specifier.startsWith('node:')) {
+      if (!isAllowedNodeBuiltinImport(from, edge.specifier)) fail(`${file}: Node builtin import is forbidden in ${from} via ${edge.specifier}`);
+      continue;
+    }
     if (!edge.resolved) { fail(`${file}: unresolved import ${edge.specifier}`); continue; }
     const resolvedWorkspace = sourceWorkspace(edge.resolved, WORKSPACES);
     if (!resolvedWorkspace || resolvedWorkspace === from) continue;
