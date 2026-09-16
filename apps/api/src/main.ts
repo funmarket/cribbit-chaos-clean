@@ -1,3 +1,7 @@
+import { cloudflareApiWorker } from './cloudflare-runtime.ts';
+
+export default cloudflareApiWorker;
+
 export { createGameCommandService } from './command-service.ts';
 export type { GameCommandService } from './command-service.ts';
 export { createOutboxWorker } from './outbox-worker.ts';
