@@ -18,12 +18,14 @@
     "build:web": "node tools/build.mjs web",
     "build:telegram": "node tools/build.mjs telegram",
     "build:api": "node tools/build.mjs api",
+    "build:cloudflare": "wrangler deploy --dry-run --config apps/api/wrangler.jsonc --env staging --outdir dist/cloudflare",
     "build": "npm run build:web && npm run build:telegram && npm run build:api",
     "verify": "npm run typecheck && npm run architecture:check && npm test && npm run build"
   },
   "devDependencies": {
+    "@types/node": "24.13.3",
     "typescript": "5.9.3",
     "vite": "7.3.6",
-    "@types/node": "24.13.3"
+    "wrangler": "4.132.0"
   }
 }
