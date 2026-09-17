@@ -1,10 +1,8 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 
-import {
-  createGameCommandService,
-  createDeadlineWorker
-} from '../apps/api/src/main.ts';
+import { createGameCommandService } from '../apps/api/src/command-service.ts';
+import { createDeadlineWorker } from '../apps/api/src/deadline-worker.ts';
 import {
   createPostgresCommandTransactionPort,
   createPostgresDeadlineStore

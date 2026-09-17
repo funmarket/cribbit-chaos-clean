@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 
-import { createGameCommandService } from '../apps/api/src/main.ts';
+import { createGameCommandService } from '../apps/api/src/command-service.ts';
 
 function canonicalState(revision = 7) {
   return {

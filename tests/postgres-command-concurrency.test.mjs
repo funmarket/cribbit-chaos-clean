@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 
 import * as database from '../packages/database/src/index.ts';
-import { createGameCommandService } from '../apps/api/src/main.ts';
+import { createGameCommandService } from '../apps/api/src/command-service.ts';
 import { withIsolatedP6Database } from './postgres-test-harness.mjs';
 
 const connectionString = process.env.POSTGRES_URL;

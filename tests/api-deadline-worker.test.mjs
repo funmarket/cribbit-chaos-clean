@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 
-import * as api from '../apps/api/src/main.ts';
+import * as api from '../apps/api/src/deadline-worker.ts';
 
 function deadlineJob(overrides = {}) {
   return {
