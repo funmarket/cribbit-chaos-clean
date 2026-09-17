@@ -33,7 +33,24 @@ jobs:
           test "$(node -p "process.versions.node.split('.')[0]")" = "24"
           test "$(npm --version)" = "10.9.2"
       - run: npm ci
-      - run: npm run verify
+      - name: Typecheck
+        timeout-minutes: 10
+        run: npm run typecheck
+      - name: Architecture check
+        timeout-minutes: 10
+        run: npm run architecture:check
+      - name: Test
+        timeout-minutes: 10
+        run: npm test
+      - name: Build web
+        timeout-minutes: 10
+        run: npm run build:web
+      - name: Build telegram
+        timeout-minutes: 10
+        run: npm run build:telegram
+      - name: Build api
+        timeout-minutes: 10
+        run: npm run build:api
       - uses: actions/upload-artifact@v4
         with:
           name: production-module-graphs
