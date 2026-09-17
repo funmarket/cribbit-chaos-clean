@@ -26,6 +26,7 @@ const allowedNodeRuntimeImports = new Set([
   'events',
   'fs',
   'net',
+  'node:http',
   'path',
   'stream',
   'string_decoder',
