@@ -264,8 +264,9 @@ export function projectGameView(state: CanonicalGameState, playerId: PlayerId): 
   if (!player) throw new Error(`Cannot project unknown player ${playerId}`);
   const turn = requireTurn(state);
   const currentTurnPlayer = turn ? state.players.find((candidate) => candidate.playerId === turn.currentPlayerId) : null;
-  const winner = state.winnerBoundary.status === 'declared'
-    ? state.players.find((candidate) => candidate.playerId === state.winnerBoundary.winnerPlayerId) ?? null
+  const winnerBoundary = state.winnerBoundary;
+  const winner = winnerBoundary.status === 'declared'
+    ? state.players.find((candidate) => candidate.playerId === winnerBoundary.winnerPlayerId) ?? null
     : null;
   const playableCardIds = handFor(state, playerId).filter((cardId) => isLegalOrdinaryCardPlay(state, playerId, cardId));
   return {
