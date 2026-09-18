@@ -41,11 +41,15 @@ export interface CommandTransactionPort {
   ): Promise<Result | null>;
 }
 
+export interface PlayableAuthoritativeInputs {
+  readonly actorPlayerId: PlayerId;
+}
+
 export interface ResolvedEngineCommand {
-  readonly authoritativeInputs: unknown;
+  readonly authoritativeInputs: PlayableAuthoritativeInputs;
   readonly definition: EngineTransitionDefinition<
     GameCommandPayload,
-    unknown,
+    PlayableAuthoritativeInputs,
     EngineEffect
   >;
 }
