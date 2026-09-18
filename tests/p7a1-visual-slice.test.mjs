@@ -54,12 +54,12 @@ test('fixture is deeply frozen and exposes no authoritative transition methods',
   assert.deepEqual(Object.keys(preview).sort(), ['projection']);
 });
 
-test('mobile CSS preserves the same four action controls', async () => {
+test('mobile CSS preserves the old-app safety rail controls', async () => {
   const { GAME_TABLE_STYLES } = await import('../packages/ui/src/styles.ts');
-  assert.match(GAME_TABLE_STYLES, /@media\(max-width:720px\)/);
-  assert.match(GAME_TABLE_STYLES, /\.action-bar\{display:grid;grid-template-columns:repeat\(4/);
+  assert.match(GAME_TABLE_STYLES, /@media\(max-width:379px\)/);
+  assert.match(GAME_TABLE_STYLES, /\.tg-safety-bar\{display:grid;grid-template-columns:repeat\(5/);
   const html = renderGameTable(createFixturePreview().projection, createPresentationState());
-  for (const label of ['PASS','REWIND','NOPE','DRAW']) assert.match(html, new RegExp(`>${label}<`));
+  for (const label of ['PASS','REWIND','NOPE','DRAW','PLAY']) assert.match(html, new RegExp(`>${label}<`));
 });
 
 test('P7A playable parity keeps party-table board, player strip and hand rail visible', async () => {
@@ -85,7 +85,7 @@ test('P7A card faces render original CHAOS-133 image assets, not text-only place
   assert.match(html, /<img[^>]+class="game-card__art"[^>]+src="\/assets\/CHAOS-133-V1\/cards\//);
   assert.match(html, /alt="[^"]+ card"/);
   assert.match(GAME_TABLE_STYLES, /\.game-card__art/);
-  assert.match(GAME_TABLE_STYLES, /object-fit:cover/);
+  assert.match(GAME_TABLE_STYLES, /object-fit:contain/);
 });
 
 test('P7A setup and lobby screens inject shared CHAOS styles before rendering', async () => {
@@ -94,14 +94,15 @@ test('P7A setup and lobby screens inject shared CHAOS styles before rendering', 
   assert.match(clientSource, /function render\(\): void \{\s*ensureCribbitStyles\(\);/);
 });
 
-test('P7A hosted setup polish styles form controls and keeps mobile eyebrow visible', async () => {
+test('P7A old-app reference restore styles setup as Cribbit app shell', async () => {
   const { GAME_TABLE_STYLES } = await import('../packages/ui/src/styles.ts');
 
-  assert.match(GAME_TABLE_STYLES, /\.cribbit-app input,\.cribbit-app button\{appearance:none/);
-  assert.match(GAME_TABLE_STYLES, /\.cribbit-app form button,\.context-actions button,\.action-bar button[^}]*border-radius:13px 5px 13px 5px/);
-  assert.match(GAME_TABLE_STYLES, /\.tg-setup-page \.game-layout\{grid-template-columns:repeat\(2,minmax\(260px,420px\)\)/);
-  assert.match(GAME_TABLE_STYLES, /\.tg-setup-page form\[data-join-session\]\{grid-template-columns:minmax\(0,1fr\) minmax\(0,1fr\) auto/);
-  assert.match(GAME_TABLE_STYLES, /\.tg-setup-page \.game-heading \.eyebrow,\.tg-lobby-page \.game-heading \.eyebrow\{display:inline-flex/);
+  assert.match(GAME_TABLE_STYLES, /--tg-lime:#9cff16/);
+  assert.match(GAME_TABLE_STYLES, /--tg-purple:#b34cff/);
+  assert.match(GAME_TABLE_STYLES, /\.cribbit-app button\{appearance:none/);
+  assert.match(GAME_TABLE_STYLES, /\.tg-room-form\{display:grid;gap:10px\}/);
+  assert.match(GAME_TABLE_STYLES, /\.tg-setup-card,\.tg-game-meta,\.tg-player-strip,\.tg-hand/);
+  assert.match(GAME_TABLE_STYLES, /\.tg-live-strip\{display:flex/);
   assert.match(GAME_TABLE_STYLES, /@media\(prefers-color-scheme:light\)\{:root\{color-scheme:dark\}/);
-  assert.doesNotMatch(GAME_TABLE_STYLES, /\.panel,\.board-pane,\.board-session-header,\.hand-zone,\.special-effect-sheet>div,\.color-chooser\{background:rgba\(255,255,255,\.94\)\}/);
+  assert.doesNotMatch(GAME_TABLE_STYLES, /centered marketing|border-radius:13px 5px 13px 5px/);
 });
