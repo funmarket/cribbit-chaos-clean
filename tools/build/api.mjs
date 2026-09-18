@@ -3,15 +3,15 @@ import { mkdir, rm, writeFile } from 'node:fs/promises';
 import { build } from 'vite';
 
 const ROOT = process.cwd();
-const aliases = {
-  '@cribbit/contracts': path.join(ROOT, 'packages/contracts/src/index.ts'),
-  '@cribbit/game-engine': path.join(ROOT, 'packages/game-engine/src/index.ts'),
-  '@cribbit/database': path.join(ROOT, 'packages/database/src/index.ts'),
-  '@cribbit/cards': path.join(ROOT, 'packages/cards/src/index.ts'),
-  '@cribbit/cards/server': path.join(ROOT, 'packages/cards/src/server.ts'),
-  '@cribbit/prompts': path.join(ROOT, 'packages/prompts/src/index.ts'),
-  '@cribbit/prompts/server': path.join(ROOT, 'packages/prompts/src/server.ts')
-};
+const aliases = [
+  { find: '@cribbit/cards/server', replacement: path.join(ROOT, 'packages/cards/src/server.ts') },
+  { find: '@cribbit/prompts/server', replacement: path.join(ROOT, 'packages/prompts/src/server.ts') },
+  { find: '@cribbit/contracts', replacement: path.join(ROOT, 'packages/contracts/src/index.ts') },
+  { find: '@cribbit/game-engine', replacement: path.join(ROOT, 'packages/game-engine/src/index.ts') },
+  { find: '@cribbit/database', replacement: path.join(ROOT, 'packages/database/src/index.ts') },
+  { find: '@cribbit/cards', replacement: path.join(ROOT, 'packages/cards/src/index.ts') },
+  { find: '@cribbit/prompts', replacement: path.join(ROOT, 'packages/prompts/src/index.ts') }
+];
 
 const postgresRuntimePackages = [
   /^pg(?:-|$)/,
