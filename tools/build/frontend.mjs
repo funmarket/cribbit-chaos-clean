@@ -21,6 +21,7 @@ export async function buildFrontend(surface) {
   await rm(outDir, { recursive: true, force: true });
   const result = await build({
     root: appRoot,
+    publicDir: path.join(ROOT, 'packages/cards'),
     resolve: { alias: aliases },
     build: { outDir, emptyOutDir: true, minify: false, rollupOptions: { output: { entryFileNames: 'assets/[name].js' } } }
   });

@@ -12,9 +12,13 @@ createServer(createNodeApiHandler({
   console.log(`Cribbit memory API on http://127.0.0.1:${apiPort}`);
 });
 
-const vite = spawn('npx', ['vite', 'apps/web', '--port', String(webPort), '--host', '127.0.0.1'], {
+const isWindows = process.platform === 'win32';
+const npxExecutable = isWindows ? 'npx.cmd' : 'npx';
+
+const vite = spawn(npxExecutable, ['vite', 'apps/web', '--port', String(webPort), '--host', '127.0.0.1'], {
   stdio: 'inherit',
-  env: { ...process.env }
+  env: { ...process.env },
+  shell: isWindows
 });
 
 vite.on('exit', (code) => process.exit(code ?? 0));

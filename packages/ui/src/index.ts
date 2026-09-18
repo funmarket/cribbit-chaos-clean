@@ -7,7 +7,7 @@ export { GAME_TABLE_STYLES } from './styles.ts';
 const STYLE_ID = 'cribbit-game-table-styles';
 export interface GameTableHandlers { readonly onDraw?: () => void; readonly onPlay?: (cardInstanceId: string) => void; readonly onStart?: () => void; }
 export interface MountedGameTable { (): void; update(projection: GameViewProjection): void; }
-function ensureStyles(): void {
+export function ensureCribbitStyles(): void {
   if (document.getElementById(STYLE_ID)) return;
   const style = document.createElement('style');
   style.id = STYLE_ID;
@@ -16,7 +16,7 @@ function ensureStyles(): void {
 }
 function labelForCard(target: Element): string { return target.querySelector<HTMLElement>('.game-card__name')?.textContent?.trim() || 'Effect preview'; }
 export function mountGameTable(root: HTMLElement, projection: GameViewProjection, handlers: GameTableHandlers = {}): MountedGameTable {
-  ensureStyles();
+  ensureCribbitStyles();
   let state: PresentationState = createPresentationState();
   let currentProjection = projection;
   const render = (): void => { root.innerHTML = renderGameTable(currentProjection, state); };

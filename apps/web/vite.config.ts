@@ -1,10 +1,12 @@
 import { defineConfig } from 'vite';
 
 function repoPath(path: string): string {
-  return new URL(`../../${path}`, import.meta.url).pathname;
+  const pathname = decodeURIComponent(new URL(`../../${path}`, import.meta.url).pathname);
+  return pathname.replace(/^\/([A-Za-z]:\/)/, '$1');
 }
 
 export default defineConfig({
+  publicDir: repoPath('packages/cards'),
   resolve: {
     alias: {
       '@cribbit/client-app': repoPath('packages/client-app/src/index.ts'),

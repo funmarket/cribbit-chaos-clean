@@ -61,3 +61,35 @@ test('mobile CSS preserves the same four action controls', async () => {
   const html = renderGameTable(createFixturePreview().projection, createPresentationState());
   for (const label of ['PASS','REWIND','NOPE','DRAW']) assert.match(html, new RegExp(`>${label}<`));
 });
+
+test('P7A playable parity keeps party-table board, player strip and hand rail visible', async () => {
+  const { GAME_TABLE_STYLES } = await import('../packages/ui/src/styles.ts');
+  const html = renderGameTable(createFixturePreview().projection, createPresentationState());
+
+  assert.match(html, /class="[^"]*tg-board[^"]*"/);
+  assert.match(html, /class="[^"]*tg-board__piles[^"]*"/);
+  assert.match(html, /class="[^"]*tg-player-strip[^"]*"/);
+  assert.match(html, /class="[^"]*tg-player-rail[^"]*"/);
+  assert.match(html, /class="[^"]*tg-hand-rail[^"]*"/);
+
+  assert.match(GAME_TABLE_STYLES, /\.tg-board__piles/);
+  assert.match(GAME_TABLE_STYLES, /\.tg-player-rail/);
+  assert.doesNotMatch(GAME_TABLE_STYLES, /\.game-rail--left\{display:none\}/);
+  assert.match(GAME_TABLE_STYLES, /\.tg-hand-rail\{[^}]*overflow-x:auto/);
+});
+
+test('P7A card faces render original CHAOS-133 image assets, not text-only placeholders', async () => {
+  const { GAME_TABLE_STYLES } = await import('../packages/ui/src/styles.ts');
+  const html = renderGameTable(createFixturePreview().projection, createPresentationState());
+
+  assert.match(html, /<img[^>]+class="game-card__art"[^>]+src="\/assets\/CHAOS-133-V1\/cards\//);
+  assert.match(html, /alt="[^"]+ card"/);
+  assert.match(GAME_TABLE_STYLES, /\.game-card__art/);
+  assert.match(GAME_TABLE_STYLES, /object-fit:cover/);
+});
+
+test('P7A setup and lobby screens inject shared CHAOS styles before rendering', async () => {
+  const clientSource = await import('node:fs/promises').then(fs => fs.readFile(new URL('../packages/client-app/src/index.ts', import.meta.url), 'utf8'));
+  assert.match(clientSource, /import \{[^}]*ensureCribbitStyles[^}]*renderCribbitHome[^}]*renderCribbitLobby/);
+  assert.match(clientSource, /function render\(\): void \{\s*ensureCribbitStyles\(\);/);
+});

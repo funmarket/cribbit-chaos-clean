@@ -1,7 +1,7 @@
 import { createCribbitApiClient } from '@cribbit/api-client';
 import type { GameViewProjection, PlayerSessionCredential } from '@cribbit/contracts';
 import type { PlatformAdapter } from '@cribbit/platform/types';
-import { mountGameTable, renderCribbitHome, renderCribbitLobby, type MountedGameTable } from '@cribbit/ui';
+import { ensureCribbitStyles, mountGameTable, renderCribbitHome, renderCribbitLobby, type MountedGameTable } from '@cribbit/ui';
 import { createFixturePreview } from './fixture-preview.ts';
 
 const mounted = new WeakSet<HTMLElement>();
@@ -120,6 +120,7 @@ export function bootstrap(root: HTMLElement, platform: PlatformAdapter): () => v
   }
 
   function render(): void {
+    ensureCribbitStyles();
     table?.();
     table = null;
     if (!state.projection || !state.credential) {
