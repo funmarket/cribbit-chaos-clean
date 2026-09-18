@@ -4,10 +4,13 @@ import {
   projectGameView,
   startPlayableGame,
   validateCanonicalState,
-  type CanonicalGameState,
-  type GameViewProjection
+  type CanonicalGameState
 } from '@cribbit/game-engine';
-import type { AcceptedCommandReceipt, GameCommandPayload } from '@cribbit/contracts';
+import type {
+  AcceptedCommandReceipt,
+  GameCommandPayload,
+  GameViewProjection
+} from '@cribbit/contracts';
 import type {
   CommandSessionTransaction,
   CommandTransactionPort,
