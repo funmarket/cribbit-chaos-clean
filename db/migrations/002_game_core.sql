@@ -21,10 +21,14 @@ create table if not exists game_participants (
   unique (session_id, seat_index)
 );
 
-alter table clean_game_sessions
-  add constraint clean_game_sessions_current_turn_participant_fk
-  foreign key (current_turn_participant_id)
-  references game_participants(id);
+do $$ begin
+  alter table clean_game_sessions
+    add constraint clean_game_sessions_current_turn_participant_fk
+    foreign key (current_turn_participant_id)
+    references game_participants(id);
+exception
+  when duplicate_object then null;
+end $$;
 
 create table if not exists game_states (
   session_id uuid primary key references clean_game_sessions(id) on delete cascade,
