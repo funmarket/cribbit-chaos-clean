@@ -19,6 +19,7 @@
     "build:telegram": "node tools/build.mjs telegram",
     "build:api": "node tools/build.mjs api",
     "start:api": "node dist/api/main.js",
+    "dev": "node tools/dev.mjs",
     "build": "npm run build:web && npm run build:telegram && npm run build:api",
     "verify": "npm run typecheck && npm run architecture:check && npm test && npm run build"
   },
