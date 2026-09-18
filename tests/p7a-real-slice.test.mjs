@@ -193,6 +193,38 @@ test('P7A api-client consumes typed session projections and commands through its
   assert.equal(calls[0].url, '/api/sessions');
 });
 
+test('P7A api-client keeps /api as the default local fallback base URL', async () => {
+  const calls = [];
+  const fakeFetch = async (url, init = {}) => {
+    calls.push({ url, init });
+    return new Response(JSON.stringify({
+      credential: { sessionId: 'abc123', playerId: 'p1', displayName: 'Ada', credential: 'opaque' },
+      projection: { source: 'server', sessionId: 'abc123', roomName: 'Room', modeLabel: 'Test', round: 0, revision: 0, status: 'waiting', connection: 'connected', players: [], currentPlayer: { playerId: 'p1', hand: [] }, drawPileCount: 0, discardCard: null, activeColor: null, direction: 'clockwise', currentTurnPlayerId: null, activeEffect: null, turnLabel: 'Waiting', winner: null, canStartGame: false, availableActions: { canDraw: false, playableCardIds: [] } }
+    }), { status: 201, headers: { 'content-type': 'application/json' } });
+  };
+  const client = createCribbitApiClient({ fetchImpl: fakeFetch });
+  await client.createSession({ displayName: 'Ada' });
+  assert.equal(calls[0].url, '/api/sessions');
+});
+
+test('P7A frontend bootstraps pass VITE_API_URL while preserving an empty-env fallback', async () => {
+  const [clientSource, webSource, telegramSource] = await Promise.all([
+    readFile('packages/client-app/src/index.ts', 'utf8'),
+    readFile('apps/web/src/main.ts', 'utf8'),
+    readFile('apps/telegram/src/main.ts', 'utf8')
+  ]);
+
+  assert.match(clientSource, /apiBaseUrl\?: string/);
+  assert.match(clientSource, /function normalizeApiBaseUrl\(apiBaseUrl: string \| undefined\)/);
+  assert.match(clientSource, /if \(normalizedApiBaseUrl\.endsWith\('\/api'\)\) return normalizedApiBaseUrl/);
+  assert.match(clientSource, /createCribbitApiClient\(\{ baseUrl: normalizeApiBaseUrl\(options\.apiBaseUrl\) \}\)/);
+  for (const source of [webSource, telegramSource]) {
+    assert.match(source, /import\.meta\.env\.VITE_API_URL/);
+    assert.match(source, /const apiBaseUrl = rawApiBaseUrl\.trim\(\) \|\| undefined/);
+    assert.match(source, /bootstrap\(root, .*\(\), \{ apiBaseUrl \}\);/);
+  }
+});
+
 test('P7A client-app contains orchestration only, not game-rule calculation', async () => {
   const source = await readFile('packages/client-app/src/index.ts', 'utf8');
   assert.doesNotMatch(source, /isLegal|match(?:es)?Color|match(?:es)?Value|winnerBoundary|Math\.random|buildDeck|shuffle/i);

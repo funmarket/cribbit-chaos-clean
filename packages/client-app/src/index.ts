@@ -13,18 +13,32 @@ interface AppState {
   readonly error: string | null;
 }
 
+export interface BootstrapOptions {
+  readonly apiBaseUrl?: string | undefined;
+}
+
+function normalizeApiBaseUrl(apiBaseUrl: string | undefined): string | undefined {
+  const trimmedApiBaseUrl = apiBaseUrl?.trim();
+  if (!trimmedApiBaseUrl) return undefined;
+
+  const normalizedApiBaseUrl = trimmedApiBaseUrl.replace(/\/+$/, '');
+  if (normalizedApiBaseUrl.endsWith('/api')) return normalizedApiBaseUrl;
+
+  return `${normalizedApiBaseUrl}/api`;
+}
+
 function errorText(error: unknown): string {
   if (error instanceof Error) return error.message;
   return 'Unexpected Cribbit error';
 }
 
 /** Shared application composition. Clients render server projections only. */
-export function bootstrap(root: HTMLElement, platform: PlatformAdapter): () => void {
+export function bootstrap(root: HTMLElement, platform: PlatformAdapter, options: BootstrapOptions = {}): () => void {
   if (mounted.has(root)) throw new Error('Application already mounted');
   mounted.add(root);
   root.dataset.accessSurface = platform.kind;
 
-  const api = createCribbitApiClient();
+  const api = createCribbitApiClient({ baseUrl: normalizeApiBaseUrl(options.apiBaseUrl) });
   let state: AppState = { credential: null, projection: null, busy: false, error: null };
   let table: MountedGameTable | null = null;
   let pollHandle: number | null = null;
