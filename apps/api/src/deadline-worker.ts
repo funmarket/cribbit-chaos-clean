@@ -1,5 +1,8 @@
-import type { CommandServiceResult, GameCommandPayload } from '@cribbit/contracts';
-import type { PlayerGameProjection } from '@cribbit/game-engine';
+import type {
+  CommandServiceResult,
+  GameCommandPayload,
+  GameViewProjection
+} from '@cribbit/contracts';
 
 import type { GameCommandService } from './command-service.ts';
 
@@ -35,7 +38,7 @@ export interface DeadlineWorker {
     | {
         readonly status: 'completed';
         readonly deadlineId: string;
-        readonly commandResult: CommandServiceResult<PlayerGameProjection>;
+        readonly commandResult: CommandServiceResult<GameViewProjection>;
       }
   >;
 }
