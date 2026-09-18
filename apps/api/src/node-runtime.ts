@@ -12,6 +12,10 @@ import {
 } from '@cribbit/database';
 
 import { createGameCommandService } from './command-service.ts';
+import {
+  createMemoryCommandTransactionPort,
+  createMemorySessionStore
+} from './memory-session-store.ts';
 
 export interface NodeApiRuntimeDependencies {
   readonly databaseUrl: string;
@@ -37,6 +41,9 @@ async function readJson(request: IncomingMessage): Promise<unknown> {
 function sendJson(response: ServerResponse, statusCode: number, body: unknown): void {
   response.statusCode = statusCode;
   response.setHeader('content-type', 'application/json; charset=utf-8');
+  response.setHeader('access-control-allow-origin', '*');
+  response.setHeader('access-control-allow-headers', 'content-type, x-cribbit-credential, authorization');
+  response.setHeader('access-control-allow-methods', 'GET,POST,OPTIONS');
   response.end(JSON.stringify(body));
 }
 
@@ -73,12 +80,17 @@ export function createNodeApiHandler({
   pool: providedPool
 }: NodeApiRuntimeDependencies) {
   let pool = providedPool ?? null;
+  const memoryStore = createMemorySessionStore();
+  const memoryTransactions = createMemoryCommandTransactionPort();
+  const useMemory = !providedPool && !databaseUrl;
   const requirePool = (): Pool => {
     if (pool) return pool;
     if (!databaseUrl) throw new Error('DATABASE_URL is required for game API routes');
     pool = new Pool({ connectionString: databaseUrl });
     return pool;
   };
+  const sessionStore = () => (useMemory ? memoryStore : createPostgresSessionStore(requirePool()));
+  const transactions = () => (useMemory ? memoryTransactions : createPostgresCommandTransactionPort(requirePool()));
 
   return async function nodeApiHandler(
     request: IncomingMessage,
@@ -86,6 +98,15 @@ export function createNodeApiHandler({
   ): Promise<void> {
     const url = new URL(request.url ?? '/', 'http://localhost');
     const pathname = url.pathname;
+
+    if (request.method === 'OPTIONS') {
+      response.statusCode = 204;
+      response.setHeader('access-control-allow-origin', '*');
+      response.setHeader('access-control-allow-headers', 'content-type, x-cribbit-credential, authorization');
+      response.setHeader('access-control-allow-methods', 'GET,POST,OPTIONS');
+      response.end();
+      return;
+    }
 
     if (request.method === 'GET' && pathname === '/__infra/db-health') {
       try {
@@ -105,8 +126,7 @@ export function createNodeApiHandler({
         const playerId = 'p1';
         const credential = randomUUID();
         const displayName = safeDisplayName(body, 'Player 1');
-        const store = createPostgresSessionStore(requirePool());
-        const created = await store.createSession({ sessionId, principalId: credential, playerId, displayName });
+        const created = await sessionStore().createSession({ sessionId, principalId: credential, playerId, displayName });
         sendJson(response, 201, {
           credential: { sessionId, playerId, displayName, credential },
           projection: created.projection
@@ -118,14 +138,15 @@ export function createNodeApiHandler({
       if (route && request.method === 'POST' && route.action === 'join') {
         const body = await readJson(request);
         const credential = randomUUID();
-        const store = createPostgresSessionStore(requirePool());
-        const existing = await requirePool().query<{ count: string }>(
-          `select count(*) from game_session_memberships where session_id = $1`,
-          [route.sessionId]
-        );
-        const playerId = `p${Number(existing.rows[0]?.count ?? 0) + 1}`;
+        const existingCount = useMemory
+          ? memoryStore.memberCount(route.sessionId)
+          : Number((await requirePool().query<{ count: string }>(
+            `select count(*) from game_session_memberships where session_id = $1`,
+            [route.sessionId]
+          )).rows[0]?.count ?? 0);
+        const playerId = `p${existingCount + 1}`;
         const displayName = safeDisplayName(body, `Player ${playerId.slice(1)}`);
-        const joined = await store.joinSession({ sessionId: route.sessionId, principalId: credential, playerId, displayName });
+        const joined = await sessionStore().joinSession({ sessionId: route.sessionId, principalId: credential, playerId, displayName });
         if (joined.status === 'rejected') { sendJson(response, 400, { ok: false, code: joined.reason }); return; }
         sendJson(response, 200, {
           credential: { sessionId: route.sessionId, playerId, displayName, credential },
@@ -137,7 +158,7 @@ export function createNodeApiHandler({
       if (route && request.method === 'GET' && route.action === 'projection') {
         const credential = credentialFrom(request);
         if (!credential) { sendJson(response, 401, { ok: false, code: 'UNAUTHENTICATED' }); return; }
-        const loaded = await createPostgresSessionStore(requirePool()).loadForPrincipal(route.sessionId, credential);
+        const loaded = await sessionStore().loadForPrincipal(route.sessionId, credential);
         if (!loaded) { sendJson(response, 403, { ok: false, code: 'NOT_SESSION_MEMBER' }); return; }
         sendJson(response, 200, { projection: loaded.projection });
         return;
@@ -146,7 +167,7 @@ export function createNodeApiHandler({
       if (route && request.method === 'POST' && route.action === 'start') {
         const credential = credentialFrom(request);
         if (!credential) { sendJson(response, 401, { ok: false, code: 'UNAUTHENTICATED' }); return; }
-        const started = await createPostgresSessionStore(requirePool()).startSession({
+        const started = await sessionStore().startSession({
           sessionId: route.sessionId,
           principalId: credential,
           shuffledDeck: shuffledDeck()
@@ -167,7 +188,7 @@ export function createNodeApiHandler({
         const commandId = body.commandId ?? randomUUID();
         const service = createGameCommandService({
           auth: { async authenticate(authInput) { return typeof authInput === 'string' && authInput ? { principalId: authInput } : null; } },
-          transactions: createPostgresCommandTransactionPort(requirePool()),
+          transactions: transactions(),
           resolver: { async resolve(input) { return resolvePlayableEngineCommand({ actorPlayerId: input.actorPlayerId, command: input.command }); } }
         });
         const result = await service.execute({
