@@ -16,13 +16,14 @@ export function createFixturePreview(status: ProjectionStatus = 'active'): Reado
     roomName: 'Night Squad',
     modeLabel: 'Party',
     round: 1,
+    revision: 0,
     status,
     connection: 'connected',
     players: [
-      { playerId:'you', displayName:'You', avatarLabel:'YO', cardCount:7, isCurrentTurn:!resolved, isCurrentPlayer:true, connection:'connected' },
-      { playerId:'maya', displayName:'Maya', avatarLabel:'MA', cardCount:4, isCurrentTurn:false, isCurrentPlayer:false, connection:'connected' },
-      { playerId:'rami', displayName:'Rami', avatarLabel:'RA', cardCount:6, isCurrentTurn:false, isCurrentPlayer:false, connection:'connected' },
-      { playerId:'lina', displayName:'Lina', avatarLabel:'LI', cardCount:2, isCurrentTurn:false, isCurrentPlayer:false, connection:'reconnecting' }
+      { playerId:'you', displayName:'You', avatarLabel:'YO', cardCount:7, seat:0, isCurrentTurn:!resolved, isCurrentPlayer:true, isHost:true, connection:'connected' },
+      { playerId:'maya', displayName:'Maya', avatarLabel:'MA', cardCount:4, seat:1, isCurrentTurn:false, isCurrentPlayer:false, isHost:false, connection:'connected' },
+      { playerId:'rami', displayName:'Rami', avatarLabel:'RA', cardCount:6, seat:2, isCurrentTurn:false, isCurrentPlayer:false, isHost:false, connection:'connected' },
+      { playerId:'lina', displayName:'Lina', avatarLabel:'LI', cardCount:2, seat:3, isCurrentTurn:false, isCurrentPlayer:false, isHost:false, connection:'reconnecting' }
     ],
     currentPlayer: {
       playerId:'you',
@@ -40,9 +41,12 @@ export function createFixturePreview(status: ProjectionStatus = 'active'): Reado
     discardCard: { instanceId:'discard-cyan-7', family:'number', label:'7', copy:2, color:'cyan', value:7 },
     activeColor:'cyan',
     direction:'clockwise',
+    currentTurnPlayerId: resolved ? null : 'you',
     activeEffect:null,
     turnLabel: resolved ? 'Round resolved' : 'Your turn',
-    winner: resolved ? { playerId:'maya', displayName:'Maya' } : null
+    winner: resolved ? { playerId:'maya', displayName:'Maya' } : null,
+    canStartGame: false,
+    availableActions: { canDraw: !resolved, playableCardIds: ['c-lime-7'] }
   };
   return deepFreeze({ projection });
 }

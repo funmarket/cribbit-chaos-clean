@@ -45,7 +45,7 @@ test('GET /__infra/db-health returns 503 when PostgreSQL health fails', async ()
   });
 });
 
-test('runtime exposes no gameplay or catch-all route', async () => {
+test('runtime still rejects unrelated catch-all routes', async () => {
   const handler = createNodeApiHandler({
     databaseUrl: 'postgres://app-role@db/cribbit',
     checkConnection: async () => {}

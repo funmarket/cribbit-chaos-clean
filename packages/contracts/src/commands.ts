@@ -1,7 +1,20 @@
-export interface GameCommandPayload {
+export interface DrawCardCommandPayload {
+  readonly kind: 'DRAW_CARD';
+}
+
+export interface PlayCardCommandPayload {
+  readonly kind: 'PLAY_CARD';
+  readonly cardInstanceId: string;
+}
+
+export type KnownGameCommandPayload = DrawCardCommandPayload | PlayCardCommandPayload;
+
+export interface UnknownGameCommandPayload {
   readonly kind: string;
   readonly [key: string]: unknown;
 }
+
+export type GameCommandPayload = KnownGameCommandPayload | UnknownGameCommandPayload;
 
 export interface GameCommandEnvelope<
   Command extends GameCommandPayload = GameCommandPayload

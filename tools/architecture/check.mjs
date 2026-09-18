@@ -1,5 +1,5 @@
 import ts from 'typescript';
-import { CLIENT_CAPABILITY_PATTERNS, CLIENT_FORBIDDEN_TARGETS, CLIENT_WORKSPACES, EXACT_HTML_SHELL, SURFACE_RULES, WORKSPACES, isAllowedEdge, isAllowedNodeBuiltinImport } from './policy.mjs';
+import { CLIENT_CAPABILITY_PATTERNS, CLIENT_FORBIDDEN_TARGETS, CLIENT_WORKSPACES, EXACT_HTML_SHELL, SURFACE_RULES, WORKSPACES, isAllowedClientCapability, isAllowedEdge, isAllowedNodeBuiltinImport } from './policy.mjs';
 import { normalizeHtml, readJson, readText, walk } from './fs.mjs';
 import { analyzeImports, sourceWorkspace } from './imports.mjs';
 import { dependencySection, loadWorkspaceManifests, validateManifestDeclarations } from './manifests.mjs';
@@ -32,7 +32,7 @@ for (const file of sourceFiles) {
 
   if (CLIENT_WORKSPACES.includes(from)) {
     for (const [label, pattern] of CLIENT_CAPABILITY_PATTERNS) {
-      if (pattern.test(analysis.sourceText)) fail(`${file}: forbidden client capability: ${label}`);
+      if (!isAllowedClientCapability(from, label) && pattern.test(analysis.sourceText)) fail(`${file}: forbidden client capability: ${label}`);
     }
   }
 

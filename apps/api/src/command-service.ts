@@ -1,12 +1,12 @@
 import type {
   CommandServiceResult,
-  GameCommandEnvelope
+  GameCommandEnvelope,
+  GameViewProjection
 } from '@cribbit/contracts';
 import {
-  projectGameState,
+  projectGameView,
   runEngineTransition,
   type CanonicalGameState,
-  type PlayerGameProjection,
   type PlayerId
 } from '@cribbit/game-engine';
 
@@ -16,18 +16,14 @@ export interface GameCommandService {
   execute(input: {
     readonly authInput: unknown;
     readonly envelope: GameCommandEnvelope;
-  }): Promise<CommandServiceResult<PlayerGameProjection>>;
+  }): Promise<CommandServiceResult<GameViewProjection>>;
 }
 
 function projectPlayerState(
   state: CanonicalGameState,
   playerId: PlayerId
-): PlayerGameProjection {
-  const projection = projectGameState(state, { kind: 'player', playerId });
-  if (!('private' in projection)) {
-    throw new Error('Player command projection resolved to a non-player audience');
-  }
-  return projection;
+): GameViewProjection {
+  return projectGameView(state, playerId);
 }
 
 export function createGameCommandService(

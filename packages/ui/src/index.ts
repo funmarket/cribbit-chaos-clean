@@ -5,6 +5,8 @@ export * from './game-table.ts';
 export { GAME_TABLE_STYLES } from './styles.ts';
 
 const STYLE_ID = 'cribbit-game-table-styles';
+export interface GameTableHandlers { readonly onDraw?: () => void; readonly onPlay?: (cardInstanceId: string) => void; readonly onStart?: () => void; }
+export interface MountedGameTable { (): void; update(projection: GameViewProjection): void; }
 function ensureStyles(): void {
   if (document.getElementById(STYLE_ID)) return;
   const style = document.createElement('style');
@@ -13,13 +15,17 @@ function ensureStyles(): void {
   document.head.append(style);
 }
 function labelForCard(target: Element): string { return target.querySelector<HTMLElement>('.game-card__name')?.textContent?.trim() || 'Effect preview'; }
-export function mountGameTable(root: HTMLElement, projection: GameViewProjection): () => void {
+export function mountGameTable(root: HTMLElement, projection: GameViewProjection, handlers: GameTableHandlers = {}): MountedGameTable {
   ensureStyles();
   let state: PresentationState = createPresentationState();
-  const render = (): void => { root.innerHTML = renderGameTable(projection, state); };
+  let currentProjection = projection;
+  const render = (): void => { root.innerHTML = renderGameTable(currentProjection, state); };
   const click = (event: Event): void => {
     const target = event.target instanceof Element ? event.target : null;
     if (!target) return;
+    if (target.closest('[data-action="draw-card"]')) { handlers.onDraw?.(); return; }
+    if (target.closest('[data-action="play-card"]')) { if (state.selectedCardId) handlers.onPlay?.(state.selectedCardId); return; }
+    if (target.closest('[data-action="start-game"]')) { handlers.onStart?.(); return; }
     const card = target.closest<HTMLElement>('[data-card-id]');
     if (card) {
       const cardId = card.dataset.cardId ?? null;
@@ -35,5 +41,7 @@ export function mountGameTable(root: HTMLElement, projection: GameViewProjection
   };
   root.addEventListener('click', click);
   render();
-  return () => { root.removeEventListener('click', click); root.replaceChildren(); };
+  const unmount = (() => { root.removeEventListener('click', click); root.replaceChildren(); }) as MountedGameTable;
+  unmount.update = (nextProjection: GameViewProjection): void => { currentProjection = nextProjection; render(); };
+  return unmount;
 }

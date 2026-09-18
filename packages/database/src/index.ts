@@ -8,6 +8,12 @@ export type {
   DatabaseCommandTransactionPort,
   DatabaseSessionMembership
 } from './postgres-command-transaction.ts';
+export { createPostgresSessionStore } from './postgres-session-store.ts';
+export type {
+  CreatedSessionRecord,
+  LoadedPlayerSession,
+  SessionStoreResult
+} from './postgres-session-store.ts';
 export { createPostgresOutboxStore } from './postgres-outbox-store.ts';
 export type {
   DatabaseOutboxClaim,

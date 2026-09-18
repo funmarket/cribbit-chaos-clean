@@ -26,6 +26,7 @@ const allowedNodeRuntimeImports = new Set([
   'events',
   'fs',
   'net',
+  'node:crypto',
   'node:http',
   'path',
   'stream',
@@ -58,7 +59,7 @@ export async function buildApi() {
   const entries = chunks.filter((chunk) => chunk.isEntry);
   if (entries.length !== 1) throw new Error(`api: expected exactly one emitted entry chunk, got ${entries.length}`);
 
-  const modules = [...new Set(chunks.flatMap((chunk) => Object.keys(chunk.modules)).map((id) => path.relative(ROOT, id).split(path.sep).join('/')))];
+  const modules = [...new Set(chunks.flatMap((chunk) => Object.keys(chunk.modules)).map((id) => path.relative(ROOT, id).split(path.sep).join('/')))] ;
   const emittedNames = new Set(chunks.map((chunk) => chunk.fileName));
   const externalImports = chunks.flatMap((chunk) => chunk.imports.filter((item) => !emittedNames.has(item)));
   const unexpectedExternalImports = externalImports.filter((item) => !allowedNodeRuntimeImports.has(item));

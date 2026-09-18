@@ -7,6 +7,7 @@
     ".": "./src/index.ts"
   },
   "dependencies": {
+    "@cribbit/api-client": "0.0.0",
     "@cribbit/contracts": "0.0.0",
     "@cribbit/platform": "0.0.0",
     "@cribbit/ui": "0.0.0"

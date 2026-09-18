@@ -17,8 +17,10 @@ export interface GameViewPlayer {
   readonly displayName: string;
   readonly avatarLabel: string;
   readonly cardCount: number;
+  readonly seat: number;
   readonly isCurrentTurn: boolean;
   readonly isCurrentPlayer: boolean;
+  readonly isHost: boolean;
   readonly connection: ProjectionConnection;
 }
 
@@ -28,6 +30,7 @@ export interface GameViewProjection {
   readonly roomName: string;
   readonly modeLabel: string;
   readonly round: number;
+  readonly revision: number;
   readonly status: ProjectionStatus;
   readonly connection: ProjectionConnection;
   readonly players: readonly GameViewPlayer[];
@@ -36,10 +39,16 @@ export interface GameViewProjection {
     readonly hand: readonly GameViewCard[];
   };
   readonly drawPileCount: number;
-  readonly discardCard: GameViewCard;
+  readonly discardCard: GameViewCard | null;
   readonly activeColor: ProjectionCardColor;
   readonly direction: ProjectionDirection;
+  readonly currentTurnPlayerId: string | null;
   readonly activeEffect: string | null;
   readonly turnLabel: string;
   readonly winner: { readonly playerId: string; readonly displayName: string } | null;
+  readonly canStartGame: boolean;
+  readonly availableActions: {
+    readonly canDraw: boolean;
+    readonly playableCardIds: readonly string[];
+  };
 }

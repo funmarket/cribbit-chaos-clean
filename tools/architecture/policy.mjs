@@ -86,6 +86,10 @@ export const CLIENT_CAPABILITY_PATTERNS = Object.freeze([
   ['canonical deck constructor', /\b(?:buildDeck|buildCanonicalDeck|createCanonicalDeck)\b/]
 ]);
 
+export const CLIENT_CAPABILITY_ALLOWLIST = Object.freeze({
+  '@cribbit/api-client': ['direct fetch']
+});
+
 export function workspaceNameFromSpecifier(specifier) {
   if (!specifier.startsWith(INTERNAL_PREFIX)) return null;
   const parts = specifier.split('/');
@@ -98,4 +102,8 @@ export function isAllowedEdge(from, to) {
 
 export function isAllowedNodeBuiltinImport(from, specifier) {
   return from === '@cribbit/api' && specifier.startsWith('node:');
+}
+
+export function isAllowedClientCapability(from, label) {
+  return (CLIENT_CAPABILITY_ALLOWLIST[from] ?? []).includes(label);
 }

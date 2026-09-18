@@ -8,8 +8,8 @@ function canonicalState(revision = 7) {
     gameId: 'game-p5',
     revision,
     players: [
-      { playerId: 'p1', seat: 0 },
-      { playerId: 'p2', seat: 1 }
+      { playerId: 'p1', seat: 0, displayName: 'One' },
+      { playerId: 'p2', seat: 1, displayName: 'Two' }
     ],
     zones: {
       drawPile: ['card-a', 'card-b'],
@@ -20,7 +20,9 @@ function canonicalState(revision = 7) {
     continuations: [],
     persistentEffects: [],
     deadlines: [],
-    winnerBoundary: { status: 'ready' }
+    winnerBoundary: { status: 'ready' },
+    lifecycle: { phase: 'active', hostPlayerId: 'p1' },
+    turn: { currentPlayerId: 'p1', direction: 'clockwise', activeColor: null, round: 1 }
   };
 }
 
@@ -227,11 +229,10 @@ test('P5 accepted transition commits state plus receipt once and returns only th
   assert.equal(result.status, 'accepted');
   assert.equal(result.receipt.acceptedRevision, 8);
   assert.equal(result.projection.revision, 8);
-  assert.equal(result.projection.audience.kind, 'player');
-  assert.equal(result.projection.audience.playerId, 'p1');
-  assert.deepEqual(result.projection.private.hand, ['card-d']);
-  assert.equal('state' in result, false);
-  assert.equal(JSON.stringify(result).includes('card-e'), false);
+  assert.equal(result.projection.source, 'server');
+  assert.equal(result.projection.currentPlayer.playerId, 'p1');
+  assert.equal(JSON.stringify(result.projection).includes('card-d'), true);
+  assert.equal(JSON.stringify(result.projection).includes('card-e'), false);
   assert.equal(calls.resolves, 1);
   assert.equal(calls.commits, 1);
   assert.equal(getCommitted().expectedRevision, 7);

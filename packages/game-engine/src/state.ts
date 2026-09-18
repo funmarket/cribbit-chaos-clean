@@ -8,9 +8,26 @@ export type EffectId = string;
 export type DeadlineId = string;
 export type SubmissionId = string;
 
+export type CanonicalGamePhase = 'waiting' | 'active' | 'resolved';
+export type CanonicalDirection = 'clockwise' | 'counterclockwise';
+export type CanonicalCardColor = 'lime' | 'orange' | 'cyan' | 'purple' | null;
+
 export interface CanonicalPlayerState {
   readonly playerId: PlayerId;
   readonly seat: number;
+  readonly displayName?: string;
+}
+
+export interface CanonicalTurnState {
+  readonly currentPlayerId: PlayerId;
+  readonly direction: CanonicalDirection;
+  readonly activeColor: CanonicalCardColor;
+  readonly round: number;
+}
+
+export interface CanonicalGameLifecycle {
+  readonly phase: CanonicalGamePhase;
+  readonly hostPlayerId: PlayerId | null;
 }
 
 export interface CanonicalZones {
@@ -85,4 +102,6 @@ export interface CanonicalGameState {
   readonly persistentEffects: readonly CanonicalPersistentEffect[];
   readonly deadlines: readonly CanonicalDeadline[];
   readonly winnerBoundary: WinnerBoundaryState;
+  readonly lifecycle?: CanonicalGameLifecycle;
+  readonly turn?: CanonicalTurnState | null;
 }
