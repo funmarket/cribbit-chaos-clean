@@ -18,16 +18,11 @@ function errorText(error: unknown): string {
   return 'Unexpected Cribbit error';
 }
 
-/** Shared application composition. Web orchestrates API calls and renders server projections only. */
+/** Shared application composition. Clients render server projections only. */
 export function bootstrap(root: HTMLElement, platform: PlatformAdapter): () => void {
   if (mounted.has(root)) throw new Error('Application already mounted');
   mounted.add(root);
   root.dataset.accessSurface = platform.kind;
-
-  if (platform.kind !== 'web') {
-    const unmountView = mountGameTable(root, createFixturePreview().projection);
-    return () => { unmountView(); mounted.delete(root); delete root.dataset.accessSurface; };
-  }
 
   const api = createCribbitApiClient();
   let state: AppState = { credential: null, projection: null, busy: false, error: null };
