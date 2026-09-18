@@ -1,4 +1,3 @@
-import { createHash, randomBytes } from 'node:crypto';
 import type pg from 'pg';
 import { withPostgresTransaction } from './postgres.ts';
 
@@ -15,8 +14,21 @@ export interface TelegramIdentityInput {
   readonly payload?: unknown;
 }
 
-function hashSessionToken(token: string): string {
-  return createHash('sha256').update(token).digest('hex');
+function requireWebCrypto(): Crypto {
+  if (!globalThis.crypto) throw new Error('Web Crypto is not available in this runtime');
+  return globalThis.crypto;
+}
+
+function randomToken(byteLength = 32): string {
+  const bytes = new Uint8Array(byteLength);
+  requireWebCrypto().getRandomValues(bytes);
+  return Buffer.from(bytes).toString('base64url');
+}
+
+async function hashSessionToken(token: string): Promise<string> {
+  const encoded = new TextEncoder().encode(token);
+  const digest = await requireWebCrypto().subtle.digest('SHA-256', encoded);
+  return Buffer.from(new Uint8Array(digest)).toString('hex');
 }
 
 function normalizeDisplayName(value: string): string {
@@ -88,23 +100,24 @@ export function createIdentityStore(pool: pg.Pool) {
         await client.query(
           `insert into user_identities(user_id, provider, provider_user_id)
            values($1, 'guest', $2)`,
-          [user.rows[0].id, `guest_${randomBytes(16).toString('hex')}`]
+          [user.rows[0].id, `guest_${randomToken(16)}`]
         );
         return { id: user.rows[0].id, displayName: user.rows[0].display_name };
       });
     },
 
     async createAuthSession(userId: string, provider: 'telegram' | 'guest'): Promise<string> {
-      const token = randomBytes(32).toString('base64url');
+      const token = randomToken();
       await pool.query(
         `insert into auth_sessions(user_id, token_hash, provider, expires_at, last_used_at)
          values($1, $2, $3, now() + interval '30 days', now())`,
-        [userId, hashSessionToken(token), provider]
+        [userId, await hashSessionToken(token), provider]
       );
       return token;
     },
 
     async authenticateSession(token: string): Promise<AppUserRecord | null> {
+      const tokenHash = await hashSessionToken(token);
       const result = await pool.query<{
         id: string;
         display_name: string;
@@ -116,10 +129,10 @@ export function createIdentityStore(pool: pg.Pool) {
           where s.token_hash = $1
             and s.revoked_at is null
             and s.expires_at > now()`,
-        [hashSessionToken(token)]
+        [tokenHash]
       );
       if (!result.rowCount) return null;
-      await pool.query(`update auth_sessions set last_used_at = now() where token_hash = $1`, [hashSessionToken(token)]);
+      await pool.query(`update auth_sessions set last_used_at = now() where token_hash = $1`, [tokenHash]);
       const row = result.rows[0];
       return {
         id: row.id,
