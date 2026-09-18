@@ -5,9 +5,9 @@ import {
   projectGameView,
   startPlayableGame,
   validateCanonicalState,
-  type CanonicalGameState,
-  type GameViewProjection
+  type CanonicalGameState
 } from '@cribbit/game-engine';
+import type { GameViewProjection } from '@cribbit/contracts';
 
 interface SessionStateRow {
   readonly canonical_state: CanonicalGameState;
