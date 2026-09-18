@@ -93,3 +93,15 @@ test('P7A setup and lobby screens inject shared CHAOS styles before rendering', 
   assert.match(clientSource, /import \{[^}]*ensureCribbitStyles[^}]*renderCribbitHome[^}]*renderCribbitLobby/);
   assert.match(clientSource, /function render\(\): void \{\s*ensureCribbitStyles\(\);/);
 });
+
+test('P7A hosted setup polish styles form controls and keeps mobile eyebrow visible', async () => {
+  const { GAME_TABLE_STYLES } = await import('../packages/ui/src/styles.ts');
+
+  assert.match(GAME_TABLE_STYLES, /\.cribbit-app input,\.cribbit-app button\{appearance:none/);
+  assert.match(GAME_TABLE_STYLES, /\.cribbit-app form button,\.context-actions button,\.action-bar button[^}]*border-radius:13px 5px 13px 5px/);
+  assert.match(GAME_TABLE_STYLES, /\.tg-setup-page \.game-layout\{grid-template-columns:repeat\(2,minmax\(260px,420px\)\)/);
+  assert.match(GAME_TABLE_STYLES, /\.tg-setup-page form\[data-join-session\]\{grid-template-columns:minmax\(0,1fr\) minmax\(0,1fr\) auto/);
+  assert.match(GAME_TABLE_STYLES, /\.tg-setup-page \.game-heading \.eyebrow,\.tg-lobby-page \.game-heading \.eyebrow\{display:inline-flex/);
+  assert.match(GAME_TABLE_STYLES, /@media\(prefers-color-scheme:light\)\{:root\{color-scheme:dark\}/);
+  assert.doesNotMatch(GAME_TABLE_STYLES, /\.panel,\.board-pane,\.board-session-header,\.hand-zone,\.special-effect-sheet>div,\.color-chooser\{background:rgba\(255,255,255,\.94\)\}/);
+});
