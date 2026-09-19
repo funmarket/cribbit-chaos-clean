@@ -303,7 +303,6 @@ test('Telegram setup controls have an active clean presentation controller', asy
     '[data-qa-hand]',
     '[data-join-code]',
     '[data-tg-back]',
-    '[data-tg-menu]',
   ]) {
     const escaped = marker.replace(/[.*+?^$()|[\]\\]/g, '\\$&');
     assert.match(controllerSource, new RegExp(escaped));
@@ -314,6 +313,9 @@ test('Telegram setup controls have an active clean presentation controller', asy
   assert.match(controllerSource, /Primary social format\./);
   assert.match(controllerSource, /Shorter timers, more anti-downtime\./);
   assert.match(controllerSource, /event\.key !== 'Enter'/);
+  assert.doesNotMatch(controllerSource, /data-tg-menu/);
+  const templateSource = await fs.readFile(new URL('../packages/ui/src/old-ui-source/telegram-templates.ts', import.meta.url), 'utf8');
+  assert.match(templateSource, /data-tg-menu aria-disabled="true" disabled title="Menu behavior is not implemented in the authoritative old Telegram UI"/);
   assert.match(clientSource, /mountTelegramPresentationController\(root, telegramDraft\)/);
   assert.doesNotMatch(controllerSource, /legacy-runtime|canonical-game-runtime|@cribbit\/game-engine|backendGame|simulation\.ts/);
 });

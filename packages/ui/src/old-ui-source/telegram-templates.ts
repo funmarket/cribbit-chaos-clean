@@ -13,7 +13,7 @@ export const OLD_TELEGRAM_ROOM_CREATION_TEMPLATE = String.raw`
           <strong>Cribbit Chaos</strong>
           <span>Telegram Mini App</span>
         </div>
-        <button class="tg-icon-button" type="button" aria-label="Menu" data-tg-menu>•••</button>
+        <button class="tg-icon-button" type="button" aria-label="Menu unavailable" data-tg-menu aria-disabled="true" disabled title="Menu behavior is not implemented in the authoritative old Telegram UI">•••</button>
       </header>
 
       <section class="tg-room-hero" aria-labelledby="tg-room-title">

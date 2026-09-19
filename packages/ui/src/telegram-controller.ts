@@ -174,9 +174,6 @@ export function mountTelegramPresentationController(
       return;
     }
 
-    if (target.closest('[data-tg-menu]')) {
-      setStatus(root, 'Room setup controls are active below. Live game actions stay server-authoritative.', 'neutral');
-    }
   };
 
   const onInput = (event: Event): void => {
