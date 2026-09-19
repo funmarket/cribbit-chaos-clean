@@ -200,7 +200,7 @@ export function mountTelegramPresentationController(
       draft.ceiling = Number(target.value);
       return;
     }
-    if (target.matches('[data-qa-hand]')) {
+    if (target.matches('[data-qa-hand]') && target instanceof HTMLInputElement) {
       draft.qaHand = target.checked;
     }
   };
