@@ -1,7 +1,7 @@
 import { CribbitApiError, createCribbitApiClient } from '@cribbit/api-client';
 import type { GameViewProjection, PlayerSessionCredential } from '@cribbit/contracts';
 import type { PlatformAdapter } from '@cribbit/platform/types';
-import { ensureCribbitStyles, mountGameTable, mountWebPresentationController, renderCribbitHome, renderCribbitLobby, type MountedGameTable, type WebProductView } from '@cribbit/ui';
+import { createTelegramPresentationDraft, ensureCribbitStyles, mountGameTable, mountTelegramPresentationController, mountWebPresentationController, renderCribbitHome, renderCribbitLobby, type MountedGameTable, type WebProductView } from '@cribbit/ui';
 import { createFixturePreview } from './fixture-preview.ts';
 
 const mounted = new WeakSet<HTMLElement>();
@@ -49,7 +49,9 @@ export function bootstrap(root: HTMLElement, platform: PlatformAdapter, options:
   let state: AppState = { credential: null, projection: null, busy: false, error: null };
   let table: MountedGameTable | null = null;
   let unmountWebPresentation: (() => void) | null = null;
+  let unmountTelegramPresentation: (() => void) | null = null;
   let webView: WebProductView = 'lobby';
+  const telegramDraft = createTelegramPresentationDraft();
   let pollHandle: number | null = null;
 
   const stopPolling = (): void => {
@@ -160,6 +162,8 @@ export function bootstrap(root: HTMLElement, platform: PlatformAdapter, options:
     ensureCribbitStyles();
     unmountWebPresentation?.();
     unmountWebPresentation = null;
+    unmountTelegramPresentation?.();
+    unmountTelegramPresentation = null;
     table?.();
     table = null;
     if (!state.projection || !state.credential) {
@@ -172,6 +176,8 @@ export function bootstrap(root: HTMLElement, platform: PlatformAdapter, options:
           initialView: webView,
           onViewChange: (nextView) => { webView = nextView; },
         });
+      } else {
+        unmountTelegramPresentation = mountTelegramPresentationController(root, telegramDraft);
       }
       return;
     }
@@ -186,6 +192,8 @@ export function bootstrap(root: HTMLElement, platform: PlatformAdapter, options:
           initialView: webView,
           onViewChange: (nextView) => { webView = nextView; },
         });
+      } else {
+        unmountTelegramPresentation = mountTelegramPresentationController(root, telegramDraft);
       }
       return;
     }
@@ -202,6 +210,7 @@ export function bootstrap(root: HTMLElement, platform: PlatformAdapter, options:
   return () => {
     stopPolling();
     unmountWebPresentation?.();
+    unmountTelegramPresentation?.();
     table?.();
     mounted.delete(root);
     delete root.dataset.accessSurface;
