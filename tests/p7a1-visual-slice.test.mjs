@@ -240,6 +240,6 @@ test('Web controller keeps persistent prompt/library mutations disabled until cl
 
   assert.match(controllerSource, /Server-backed library persistence is not connected yet/);
   assert.match(controllerSource, /Server-backed room-pool persistence is not connected yet/);
-  assert.match(controllerSource, /Persistent prompt creation will only be enabled through the clean server API/);
+  assert.match(controllerSource, /persistent prompt creation will only be enabled through the clean server API/);
   assert.doesNotMatch(controllerSource, /localStorage|sessionStorage/);
 });
