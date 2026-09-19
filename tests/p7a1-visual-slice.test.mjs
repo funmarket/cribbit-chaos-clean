@@ -70,7 +70,8 @@ test('mobile CSS preserves the extracted old-app safety rail controls', async ()
   assert.match(GAME_TABLE_STYLES, /\.tg-safety-bar \{\s*display: grid;\s*grid-template-columns: repeat\(4/);
   assert.match(GAME_TABLE_STYLES, /\.cribbit-clean-web-table \.tg-safety-bar,\.cribbit-clean-telegram-table \.tg-safety-bar\{display:grid;grid-template-columns:repeat\(5/);
   const html = renderGameTable(createFixturePreview().projection, createPresentationState(), 'telegram');
-  for (const label of ['Pass','Rewind','Draw','Play']) assert.match(html, new RegExp(`>${label}<`));
+  for (const label of ['Pass','Rewind','Draw']) assert.match(html, new RegExp(`>${label}<`));
+  assert.doesNotMatch(html, /<nav class="tg-safety-bar"[\s\S]*?>Play</);
 });
 
 test('P7A playable parity keeps old Web board, player strip and hand rail visible', async () => {
@@ -175,13 +176,36 @@ test('Web shell and live game keep the extracted old template structure active',
   assert.doesNotMatch(gameHtml, /cribbit-clean-web-table|Old UI surface; clean API commands underneath|Railway authority/);
 });
 
-test('Telegram setup and game output preserve extracted old presentation contracts', () => {
+test('Telegram setup and game actively hydrate extracted old presentation templates', async () => {
+  const [{ OLD_TELEGRAM_ROOM_CREATION_TEMPLATE, OLD_TELEGRAM_GAME_TEMPLATE }, fs] = await Promise.all([
+    import('../packages/ui/src/old-ui-source/telegram-templates.ts'),
+    import('node:fs/promises'),
+  ]);
+  const rendererSource = await fs.readFile(new URL('../packages/ui/src/game-table.ts', import.meta.url), 'utf8');
   const preview = createFixturePreview();
   const setupHtml = renderCribbitHome({ busy: false, error: null, surface: 'telegram' });
   const gameHtml = renderGameTable(preview.projection, createPresentationState(), 'telegram');
 
+  assert.match(rendererSource, /OLD_TELEGRAM_ROOM_CREATION_TEMPLATE/);
+  assert.match(rendererSource, /OLD_TELEGRAM_GAME_TEMPLATE/);
+  assert.doesNotMatch(
+    rendererSource.slice(rendererSource.indexOf('function telegramRoomCreation'), rendererSource.indexOf('function telegramGameTemplate')),
+    /<main class="tg-app tg-room-page"/,
+  );
+  assert.doesNotMatch(
+    rendererSource.slice(rendererSource.indexOf('function telegramGameTemplate'), rendererSource.indexOf('export function GameTable')),
+    /<main class="tg-app tg-game-page"/,
+  );
+
+  orderedMarkers(OLD_TELEGRAM_ROOM_CREATION_TEMPLATE, ['tg-app tg-room-page', 'tg-app__header', 'tg-room-hero', 'tg-room-form', 'tg-setup-card', 'tg-grid-2', 'tg-select', 'tg-mode-grid', 'tg-count-grid', 'tg-source-grid', 'tg-toggle-row', 'tg-switch', 'tg-join-row', 'tg-action-status', 'tg-primary-actions']);
+  orderedMarkers(OLD_TELEGRAM_GAME_TEMPLATE, ['tg-app tg-game-page', 'tg-game-header', 'tg-live-strip', 'tg-game-meta', 'tg-timer-ring', 'tg-board__piles', 'tg-board-zone--discard', 'tg-board-zone--draw', 'tg-player-strip', '{{ACTIVE_STATE}}', 'tg-hand', 'tg-safety-bar', 'tg-action-status']);
+
   orderedMarkers(setupHtml, ['tg-app tg-room-page', 'tg-app__header', 'tg-room-hero', 'tg-room-form', 'tg-setup-card', 'tg-grid-2', 'tg-select', 'tg-mode-grid', 'tg-mode-card', 'tg-count-grid', 'tg-count-chip', 'tg-source-grid', 'tg-source-card', 'tg-toggle-row', 'tg-switch', 'tg-join-row', 'tg-action-status', 'tg-primary-actions']);
-  orderedMarkers(gameHtml, ['tg-app tg-game-page', 'tg-game-header', 'tg-live-strip', 'tg-game-meta', 'tg-timer-ring', 'tg-board__piles', 'tg-board-zone--discard', 'tg-board-zone--draw', 'tg-player-strip', 'tg-active-state', 'tg-hand', 'tg-safety-bar', 'tg-action-status']);
+  orderedMarkers(gameHtml, ['tg-app tg-game-page', 'tg-game-header', 'tg-live-strip', 'tg-game-meta', 'tg-timer-ring', 'tg-board__piles', 'tg-board-zone--discard', 'tg-board-zone--draw', 'tg-player-strip', 'tg-hand', 'tg-safety-bar', 'tg-action-status']);
   assert.match(gameHtml, /<small>SEC<\/small>/);
+  assert.match(gameHtml, /data-card-kind=/);
+  assert.match(gameHtml, /data-legal=/);
+  assert.match(gameHtml, /game-card__legal-badge[^>]*>LEGAL<\/span>/);
+  assert.match(gameHtml, /tg-shared-card-back--board/);
   assert.doesNotMatch(gameHtml, /<small>REV<\/small>|cribbit-clean-telegram-table|Projection readback only/);
 });
