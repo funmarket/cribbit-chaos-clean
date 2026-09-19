@@ -120,16 +120,30 @@ export function bootstrap(root: HTMLElement, platform: PlatformAdapter, options:
   };
 
   function bindHome(): void {
+    const readCreateName = (): string =>
+      root.querySelector<HTMLInputElement>('[name="createName"], #profileName, [data-profile-input]')?.value.trim() || 'Player 1';
+    const readJoinSession = (): string | undefined =>
+      root.querySelector<HTMLInputElement>('[name="sessionId"], #joinCode, [data-join-code]')?.value.trim() || undefined;
+    const readJoinName = (): string =>
+      root.querySelector<HTMLInputElement>('[name="joinName"], #profileName, [data-profile-input]')?.value.trim() || 'Player 2';
+
     root.querySelector<HTMLFormElement>('[data-create-session]')?.addEventListener('submit', (event) => {
       event.preventDefault();
-      const input = root.querySelector<HTMLInputElement>('[name="createName"]');
-      createSession(input?.value.trim() || 'Player 1');
+      createSession(readCreateName());
+    });
+    root.querySelector<HTMLButtonElement>('#startGameButton, [data-action="create-game"]')?.addEventListener('click', (event) => {
+      event.preventDefault();
+      createSession(readCreateName());
     });
     root.querySelector<HTMLFormElement>('[data-join-session]')?.addEventListener('submit', (event) => {
       event.preventDefault();
-      const session = root.querySelector<HTMLInputElement>('[name="sessionId"]')?.value.trim();
-      const name = root.querySelector<HTMLInputElement>('[name="joinName"]')?.value.trim() || 'Player 2';
-      if (session) joinSession(session, name);
+      const session = readJoinSession();
+      if (session) joinSession(session, readJoinName());
+    });
+    root.querySelector<HTMLButtonElement>('[data-action="join-room"]')?.addEventListener('click', (event) => {
+      event.preventDefault();
+      const session = readJoinSession();
+      if (session) joinSession(session, readJoinName());
     });
   }
 
@@ -138,13 +152,13 @@ export function bootstrap(root: HTMLElement, platform: PlatformAdapter, options:
     table?.();
     table = null;
     if (!state.projection || !state.credential) {
-      root.innerHTML = renderCribbitHome({ busy: state.busy, error: state.error });
+      root.innerHTML = renderCribbitHome({ busy: state.busy, error: state.error, surface: platform.kind });
       bindHome();
       return;
     }
 
     if (state.projection.status === 'waiting') {
-      root.innerHTML = renderCribbitLobby(state.projection, { busy: state.busy, error: state.error });
+      root.innerHTML = renderCribbitLobby(state.projection, { busy: state.busy, error: state.error, surface: platform.kind });
       root.querySelector<HTMLButtonElement>('[data-action="start-game"]')?.addEventListener('click', startGame);
       return;
     }
@@ -152,7 +166,7 @@ export function bootstrap(root: HTMLElement, platform: PlatformAdapter, options:
     root.innerHTML = '<div data-game-table-root></div>';
     const target = root.querySelector<HTMLElement>('[data-game-table-root]');
     if (!target) throw new Error('Game table mount missing');
-    table = mountGameTable(target, state.projection, { onDraw: drawCard, onPlay: playCard });
+    table = mountGameTable(target, state.projection, { onDraw: drawCard, onPlay: playCard }, platform.kind);
   }
 
   render();

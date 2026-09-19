@@ -54,11 +54,12 @@ test('fixture is deeply frozen and exposes no authoritative transition methods',
   assert.deepEqual(Object.keys(preview).sort(), ['projection']);
 });
 
-test('mobile CSS preserves the old-app safety rail controls', async () => {
+test('mobile CSS preserves the extracted old-app safety rail controls', async () => {
   const { GAME_TABLE_STYLES } = await import('../packages/ui/src/styles.ts');
-  assert.match(GAME_TABLE_STYLES, /@media\(max-width:379px\)/);
-  assert.match(GAME_TABLE_STYLES, /\.tg-safety-bar\{display:grid;grid-template-columns:repeat\(5/);
-  const html = renderGameTable(createFixturePreview().projection, createPresentationState());
+  assert.match(GAME_TABLE_STYLES, /@media \(max-width: 379px\)/);
+  assert.match(GAME_TABLE_STYLES, /\.tg-safety-bar \{\s*display: grid;\s*grid-template-columns: repeat\(4/);
+  assert.match(GAME_TABLE_STYLES, /\.cribbit-clean-web-table \.tg-safety-bar,\.cribbit-clean-telegram-table \.tg-safety-bar\{display:grid;grid-template-columns:repeat\(5/);
+  const html = renderGameTable(createFixturePreview().projection, createPresentationState(), 'telegram');
   for (const label of ['PASS','REWIND','NOPE','DRAW','PLAY']) assert.match(html, new RegExp(`>${label}<`));
 });
 
@@ -75,7 +76,7 @@ test('P7A playable parity keeps party-table board, player strip and hand rail vi
   assert.match(GAME_TABLE_STYLES, /\.tg-board__piles/);
   assert.match(GAME_TABLE_STYLES, /\.tg-player-rail/);
   assert.doesNotMatch(GAME_TABLE_STYLES, /\.game-rail--left\{display:none\}/);
-  assert.match(GAME_TABLE_STYLES, /\.tg-hand-rail\{[^}]*overflow-x:auto/);
+  assert.match(GAME_TABLE_STYLES, /\.tg-hand-rail\s*\{[^}]*overflow-x:\s*auto/);
 });
 
 test('P7A card faces render original CHAOS-133 image assets, not text-only placeholders', async () => {
@@ -94,15 +95,50 @@ test('P7A setup and lobby screens inject shared CHAOS styles before rendering', 
   assert.match(clientSource, /function render\(\): void \{\s*ensureCribbitStyles\(\);/);
 });
 
-test('P7A old-app reference restore styles setup as Cribbit app shell', async () => {
-  const { GAME_TABLE_STYLES } = await import('../packages/ui/src/styles.ts');
+test('P7A full extraction composes exact old UI source files and clean binding adapters', async () => {
+  const [{ GAME_TABLE_STYLES }, sourceText, fs] = await Promise.all([
+    import('../packages/ui/src/styles.ts'),
+    import('../packages/ui/src/old-ui-source/source-text.ts'),
+    import('node:fs/promises'),
+  ]);
+  const manifest = JSON.parse(await fs.readFile(new URL('../packages/ui/src/old-ui-source/manifest.json', import.meta.url), 'utf8'));
+  const manifestByPath = new Map(manifest.map(entry => [entry.path, entry]));
 
-  assert.match(GAME_TABLE_STYLES, /--tg-lime:#9cff16/);
-  assert.match(GAME_TABLE_STYLES, /--tg-purple:#b34cff/);
-  assert.match(GAME_TABLE_STYLES, /\.cribbit-app button\{appearance:none/);
-  assert.match(GAME_TABLE_STYLES, /\.tg-room-form\{display:grid;gap:10px\}/);
-  assert.match(GAME_TABLE_STYLES, /\.tg-setup-card,\.tg-game-meta,\.tg-player-strip,\.tg-hand/);
-  assert.match(GAME_TABLE_STYLES, /\.tg-live-strip\{display:flex/);
-  assert.match(GAME_TABLE_STYLES, /@media\(prefers-color-scheme:light\)\{:root\{color-scheme:dark\}/);
+  for (const requiredPath of [
+    'packages/ui/src/template.html',
+    'packages/ui/src/styles.css',
+    'packages/ui/src/compact-cards.css',
+    'packages/ui/src/draw-pile-card-back.css',
+    'apps/web/src/web-game.css',
+    'apps/web/src/web-compact.css',
+    'apps/web/src/canonical-hero-cards.css',
+    'apps/web/src/canonical-board-cards.css',
+    'apps/telegram/src/styles/telegram.css',
+    'apps/telegram/src/styles/game.css',
+    'apps/telegram/src/styles/cards.css',
+    'apps/telegram/src/styles/contextual.css',
+    'apps/telegram/src/styles/hardening.css',
+  ]) {
+    assert.equal(manifestByPath.get(requiredPath)?.status, 'copied-verbatim-ui-source', `${requiredPath} is copied as active UI source`);
+  }
+
+  for (const requiredReferencePath of [
+    'apps/web/src/main.ts',
+    'apps/telegram/src/bootstrapTelegram.ts',
+    'apps/telegram/src/gameView.ts',
+  ]) {
+    const entry = manifestByPath.get(requiredReferencePath);
+    assert.equal(entry?.status, 'copied-verbatim-inert-reference', `${requiredReferencePath} is copied as inert UI/template reference`);
+    assert.match(entry?.stored_as ?? '', /\.source\.txt$/);
+  }
+
+  assert.match(GAME_TABLE_STYLES, /--tg-lime: #9cff16/);
+  assert.match(GAME_TABLE_STYLES, /\.cc-web-hero/);
+  assert.match(GAME_TABLE_STYLES, /\.product-nav/);
+  assert.match(GAME_TABLE_STYLES, /\.desktop-gameboard/);
+  assert.match(GAME_TABLE_STYLES, /\.tg-room-form/);
+  assert.match(GAME_TABLE_STYLES, /\.tg-game-meta/);
+  assert.match(GAME_TABLE_STYLES, /Clean-app binding adapters/);
+  assert.match(sourceText.OLD_PACKAGES_UI_SRC_TEMPLATE_HTML, /data-nav="board"/);
   assert.doesNotMatch(GAME_TABLE_STYLES, /centered marketing|border-radius:13px 5px 13px 5px/);
 });

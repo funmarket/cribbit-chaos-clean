@@ -15,11 +15,11 @@ export function ensureCribbitStyles(): void {
   document.head.append(style);
 }
 function labelForCard(target: Element): string { return target.querySelector<HTMLElement>('.game-card__name')?.textContent?.trim() || 'Effect preview'; }
-export function mountGameTable(root: HTMLElement, projection: GameViewProjection, handlers: GameTableHandlers = {}): MountedGameTable {
+export function mountGameTable(root: HTMLElement, projection: GameViewProjection, handlers: GameTableHandlers = {}, surface: 'web' | 'telegram' = 'web'): MountedGameTable {
   ensureCribbitStyles();
   let state: PresentationState = createPresentationState();
   let currentProjection = projection;
-  const render = (): void => { root.innerHTML = renderGameTable(currentProjection, state); };
+  const render = (): void => { root.innerHTML = renderGameTable(currentProjection, state, surface); };
   const click = (event: Event): void => {
     const target = event.target instanceof Element ? event.target : null;
     if (!target) return;
