@@ -209,3 +209,37 @@ test('Telegram setup and game actively hydrate extracted old presentation templa
   assert.match(gameHtml, /tg-shared-card-back--board/);
   assert.doesNotMatch(gameHtml, /<small>REV<\/small>|cribbit-clean-telegram-table|Projection readback only/);
 });
+
+
+test('Web presentation controller is actively exported and wired without old gameplay authority', async () => {
+  const fs = await import('node:fs/promises');
+  const [uiIndex, clientSource, controllerSource] = await Promise.all([
+    fs.readFile(new URL('../packages/ui/src/index.ts', import.meta.url), 'utf8'),
+    fs.readFile(new URL('../packages/client-app/src/index.ts', import.meta.url), 'utf8'),
+    fs.readFile(new URL('../packages/ui/src/web-controller.ts', import.meta.url), 'utf8'),
+  ]);
+
+  assert.match(uiIndex, /export \* from '\.\/web-controller\.ts';/);
+  assert.match(clientSource, /mountWebPresentationController/);
+  assert.match(clientSource, /platform\.kind === 'web'/);
+  assert.match(controllerSource, /closest<HTMLElement>\('\[data-nav\]'\)/);
+  assert.match(controllerSource, /open-mobile-nav/);
+  assert.match(controllerSource, /open-global-search/);
+  assert.match(controllerSource, /open-notifications/);
+  assert.match(controllerSource, /open-profile/);
+  assert.match(controllerSource, /data-board-tab/);
+  assert.match(controllerSource, /data-library-tab/);
+  assert.match(controllerSource, /data-create-destination/);
+  assert.match(controllerSource, /data-room-category/);
+  assert.doesNotMatch(controllerSource, /legacy-runtime|canonical-game-runtime|@cribbit\/game-engine|playable-slice/);
+});
+
+test('Web controller keeps persistent prompt/library mutations disabled until clean server APIs own them', async () => {
+  const fs = await import('node:fs/promises');
+  const controllerSource = await fs.readFile(new URL('../packages/ui/src/web-controller.ts', import.meta.url), 'utf8');
+
+  assert.match(controllerSource, /Server-backed library persistence is not connected yet/);
+  assert.match(controllerSource, /Server-backed room-pool persistence is not connected yet/);
+  assert.match(controllerSource, /Persistent prompt creation will only be enabled through the clean server API/);
+  assert.doesNotMatch(controllerSource, /localStorage|sessionStorage/);
+});
