@@ -2,6 +2,7 @@ import type { GameViewProjection } from '../../contracts/src/view.ts';
 import { GAME_TABLE_STYLES } from './styles.ts';
 import { createPresentationState, renderGameTable, type PresentationState } from './game-table.ts';
 export * from './game-table.ts';
+export * from './web-controller.ts';
 export { GAME_TABLE_STYLES } from './styles.ts';
 
 const STYLE_ID = 'cribbit-game-table-styles';

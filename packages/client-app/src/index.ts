@@ -1,7 +1,7 @@
 import { createCribbitApiClient } from '@cribbit/api-client';
 import type { GameViewProjection, PlayerSessionCredential } from '@cribbit/contracts';
 import type { PlatformAdapter } from '@cribbit/platform/types';
-import { ensureCribbitStyles, mountGameTable, renderCribbitHome, renderCribbitLobby, type MountedGameTable } from '@cribbit/ui';
+import { ensureCribbitStyles, mountGameTable, mountWebPresentationController, renderCribbitHome, renderCribbitLobby, type MountedGameTable } from '@cribbit/ui';
 import { createFixturePreview } from './fixture-preview.ts';
 
 const mounted = new WeakSet<HTMLElement>();
@@ -41,6 +41,7 @@ export function bootstrap(root: HTMLElement, platform: PlatformAdapter, options:
   const api = createCribbitApiClient({ baseUrl: normalizeApiBaseUrl(options.apiBaseUrl) });
   let state: AppState = { credential: null, projection: null, busy: false, error: null };
   let table: MountedGameTable | null = null;
+  let unmountWebPresentation: (() => void) | null = null;
   let pollHandle: number | null = null;
 
   const stopPolling = (): void => {
@@ -149,17 +150,31 @@ export function bootstrap(root: HTMLElement, platform: PlatformAdapter, options:
 
   function render(): void {
     ensureCribbitStyles();
+    unmountWebPresentation?.();
+    unmountWebPresentation = null;
     table?.();
     table = null;
     if (!state.projection || !state.credential) {
       root.innerHTML = renderCribbitHome({ busy: state.busy, error: state.error, surface: platform.kind });
       bindHome();
+      if (platform.kind === 'web') {
+        unmountWebPresentation = mountWebPresentationController(root, {
+          canOpenGame: () => Boolean(state.projection && state.projection.status !== 'waiting'),
+          canOpenRecap: () => Boolean(state.projection?.winner),
+        });
+      }
       return;
     }
 
     if (state.projection.status === 'waiting') {
       root.innerHTML = renderCribbitLobby(state.projection, { busy: state.busy, error: state.error, surface: platform.kind });
       root.querySelector<HTMLButtonElement>('[data-action="start-game"]')?.addEventListener('click', startGame);
+      if (platform.kind === 'web') {
+        unmountWebPresentation = mountWebPresentationController(root, {
+          canOpenGame: () => Boolean(state.projection && state.projection.status !== 'waiting'),
+          canOpenRecap: () => Boolean(state.projection?.winner),
+        });
+      }
       return;
     }
 
@@ -174,6 +189,7 @@ export function bootstrap(root: HTMLElement, platform: PlatformAdapter, options:
 
   return () => {
     stopPolling();
+    unmountWebPresentation?.();
     table?.();
     mounted.delete(root);
     delete root.dataset.accessSurface;
