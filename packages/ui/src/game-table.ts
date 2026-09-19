@@ -318,8 +318,8 @@ function telegramRoomCreation(input: { readonly busy: boolean; readonly error: s
   const disabled = input.busy ? ' disabled' : '';
   const status = input.error ? esc(input.error) : input.lobby ? `Room ${esc(input.lobby.sessionId)} · ${input.lobby.players.length} joined` : '';
   const primaryAction = input.lobby
-    ? `<button class="tg-button tg-button--create" data-action="start-game" type="button"${input.lobby.canStartGame && !input.busy ? '' : ' disabled'}>Start Game</button><button class="tg-button tg-button--demo" data-action="demo-game" type="button" disabled>Start Simulation</button>`
-    : `<button class="tg-button tg-button--create" data-action="create-game" type="button"${disabled}>Create Game</button><button class="tg-button tg-button--demo" data-action="demo-game" type="button" disabled>Start Simulation</button>`;
+    ? `<button class="tg-button tg-button--create" data-action="start-game" type="button"${input.lobby.canStartGame && !input.busy ? '' : ' disabled'}>Start Game</button><button class="tg-button tg-button--demo" data-action="demo-game" type="button">Start Simulation</button>`
+    : `<button class="tg-button tg-button--create" data-action="create-game" type="button"${disabled}>Create Game</button><button class="tg-button tg-button--demo" data-action="demo-game" type="button">Start Simulation</button>`;
   const joined = input.lobby
     ? `<section class="tg-setup-card tg-player-strip" aria-label="Joined players"><div class="tg-section-label"><span>Joined players</span><strong>${input.lobby.players.length}</strong></div><div class="tg-player-rail">${telegramPlayerRail(input.lobby)}</div></section>`
     : '';

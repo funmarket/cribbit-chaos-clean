@@ -1,7 +1,7 @@
 import { CribbitApiError, createCribbitApiClient } from '@cribbit/api-client';
 import type { GameViewProjection, PlayerSessionCredential } from '@cribbit/contracts';
 import type { PlatformAdapter } from '@cribbit/platform/types';
-import { createTelegramPresentationDraft, ensureCribbitStyles, mountGameTable, mountTelegramPresentationController, mountWebPresentationController, renderCribbitHome, renderCribbitLobby, type MountedGameTable, type WebProductView } from '@cribbit/ui';
+import { createTelegramPresentationDraft, ensureCribbitStyles, mountGameTable, mountTelegramPresentationController, mountTelegramTopMenuController, mountWebPresentationController, renderCribbitHome, renderCribbitLobby, type MountedGameTable, type WebProductView } from '@cribbit/ui';
 import { createFixturePreview } from './fixture-preview.ts';
 
 const mounted = new WeakSet<HTMLElement>();
@@ -114,6 +114,13 @@ export function bootstrap(root: HTMLElement, platform: PlatformAdapter, options:
     render();
   };
 
+  const returnToTelegramRoomSetup = (): void => {
+    simulationProjection = null;
+    stopPolling();
+    state = { credential: null, projection: null, busy: false, error: null };
+    render();
+  };
+
   const startGame = (): void => {
     if (!state.credential) return;
     void withBusy(async () => {
@@ -174,6 +181,10 @@ export function bootstrap(root: HTMLElement, platform: PlatformAdapter, options:
       const session = readJoinSession();
       if (session) joinSession(session, readJoinName());
     });
+    root.querySelector<HTMLButtonElement>('[data-action="demo-game"]')?.addEventListener('click', (event) => {
+      event.preventDefault();
+      startSimulation();
+    });
   }
 
   function render(): void {
@@ -189,6 +200,13 @@ export function bootstrap(root: HTMLElement, platform: PlatformAdapter, options:
       const target = root.querySelector<HTMLElement>('[data-game-table-root]');
       if (!target) throw new Error('Simulation table mount missing');
       table = mountGameTable(target, simulationProjection, {}, platform.kind);
+      if (platform.kind === 'telegram') {
+        unmountTelegramPresentation = mountTelegramTopMenuController(target, {
+          inGame: true,
+          connected: false,
+          onRoomSetup: returnToTelegramRoomSetup,
+        });
+      }
       return;
     }
     if (!state.projection || !state.credential) {
@@ -202,7 +220,10 @@ export function bootstrap(root: HTMLElement, platform: PlatformAdapter, options:
           onViewChange: (nextView) => { webView = nextView; },
         });
       } else {
-        unmountTelegramPresentation = mountTelegramPresentationController(root, telegramDraft);
+        unmountTelegramPresentation = mountTelegramPresentationController(root, telegramDraft, {
+          connected: false,
+          onSimulation: startSimulation,
+        });
       }
       return;
     }
@@ -218,7 +239,10 @@ export function bootstrap(root: HTMLElement, platform: PlatformAdapter, options:
           onViewChange: (nextView) => { webView = nextView; },
         });
       } else {
-        unmountTelegramPresentation = mountTelegramPresentationController(root, telegramDraft);
+        unmountTelegramPresentation = mountTelegramPresentationController(root, telegramDraft, {
+          connected: false,
+          onSimulation: startSimulation,
+        });
       }
       return;
     }
@@ -227,6 +251,13 @@ export function bootstrap(root: HTMLElement, platform: PlatformAdapter, options:
     const target = root.querySelector<HTMLElement>('[data-game-table-root]');
     if (!target) throw new Error('Game table mount missing');
     table = mountGameTable(target, state.projection, { onDraw: drawCard, onPlay: playCard }, platform.kind);
+    if (platform.kind === 'telegram') {
+      unmountTelegramPresentation = mountTelegramTopMenuController(target, {
+        inGame: true,
+        connected: false,
+        onRoomSetup: returnToTelegramRoomSetup,
+      });
+    }
   }
 
   render();

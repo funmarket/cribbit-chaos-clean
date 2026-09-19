@@ -129,11 +129,162 @@ function syncDraft(root: HTMLElement, draft: TelegramPresentationDraft): void {
   syncSources(root, draft);
 }
 
+export interface TelegramTopMenuOptions {
+  readonly inGame?: boolean;
+  readonly connected?: boolean;
+  readonly onSimulation?: () => void;
+  readonly onRoomSetup?: () => void;
+  readonly onAccount?: () => void;
+  readonly onClose?: () => void;
+}
+
+type TelegramPopupButton = {
+  readonly id?: string;
+  readonly type?: 'default' | 'ok' | 'close' | 'cancel' | 'destructive';
+  readonly text?: string;
+};
+
+type TelegramNativeExtras = {
+  readonly close?: () => void;
+  readonly showPopup?: (
+    params: {
+      readonly title?: string;
+      readonly message: string;
+      readonly buttons?: readonly TelegramPopupButton[];
+    },
+    callback?: (buttonId: string) => void,
+  ) => void;
+  readonly HapticFeedback?: {
+    readonly impactOccurred?: (style: 'light') => void;
+  };
+};
+
+function nativeTelegram(root: HTMLElement): TelegramNativeExtras | undefined {
+  const win = root.ownerDocument.defaultView as (Window & {
+    Telegram?: { WebApp?: TelegramNativeExtras };
+  }) | null;
+  return win?.Telegram?.WebApp;
+}
+
+function setMenuStatus(root: HTMLElement, text: string, tone: 'neutral' | 'success' | 'warning' = 'neutral'): void {
+  const status = root.querySelector<HTMLElement>('[data-action-status],[data-game-status]');
+  if (!status) return;
+  status.textContent = text;
+  status.dataset.tone = tone;
+}
+
+export function mountTelegramTopMenuController(
+  root: HTMLElement,
+  options: TelegramTopMenuOptions = {},
+): () => void {
+  const openTopMenu = (): void => {
+    const tg = nativeTelegram(root);
+    tg?.HapticFeedback?.impactOccurred?.('light');
+    const connected = Boolean(options.connected);
+    const inGame = options.inGame ?? Boolean(root.querySelector('[data-game-simulation]'));
+
+    const buttons: readonly TelegramPopupButton[] = inGame
+      ? [
+          { id: 'room', type: 'default', text: 'Room Setup' },
+          { id: 'account', type: 'default', text: connected ? 'Account: Connected' : 'Account: Reconnect' },
+          { id: 'close', type: 'destructive', text: 'Close App' },
+        ]
+      : [
+          { id: 'simulation', type: 'default', text: 'Start Simulation' },
+          { id: 'account', type: 'default', text: connected ? 'Account: Connected' : 'Account: Reconnect' },
+          { id: 'close', type: 'destructive', text: 'Close App' },
+        ];
+
+    const handleChoice = (buttonId: string): void => {
+      if (buttonId === 'simulation') {
+        if (options.onSimulation) options.onSimulation();
+        else root.querySelector<HTMLButtonElement>('[data-action="demo-game"]')?.click();
+        return;
+      }
+      if (buttonId === 'room') {
+        if (options.onRoomSetup) options.onRoomSetup();
+        else root.querySelector<HTMLButtonElement>('[data-game-back]')?.click();
+        return;
+      }
+      if (buttonId === 'account') {
+        if (options.onAccount) options.onAccount();
+        else setMenuStatus(root, 'Telegram authentication is not established for this launch.', 'warning');
+        return;
+      }
+      if (buttonId === 'close') {
+        options.onClose?.();
+        tg?.close?.();
+      }
+    };
+
+    if (tg?.showPopup) {
+      tg.showPopup(
+        {
+          title: 'Cribbit Chaos',
+          message: connected
+            ? 'Live account connected.'
+            : 'Live account needs authentication. Simulation is still available.',
+          buttons,
+        },
+        handleChoice,
+      );
+      return;
+    }
+
+    root.querySelector<HTMLElement>('[data-tg-menu-fallback]')?.remove();
+    const fallback = root.ownerDocument.createElement('div');
+    fallback.setAttribute('data-tg-menu-fallback', '');
+    fallback.style.position = 'fixed';
+    fallback.style.inset = '0';
+    fallback.style.zIndex = '9999';
+    fallback.style.display = 'grid';
+    fallback.style.placeItems = 'end center';
+    fallback.style.padding = '16px';
+    fallback.style.background = 'rgba(0,0,0,.62)';
+    fallback.innerHTML = `
+      <section class="tg-setup-card" style="width:min(100%,430px);display:grid;gap:8px" role="dialog" aria-modal="true" aria-label="Cribbit menu">
+        <div class="tg-section-label"><span>Cribbit Menu</span><small>${connected ? 'Account connected' : 'Authentication required'}</small></div>
+        ${buttons.map(button => `<button class="tg-button" type="button" data-menu-choice="${button.id ?? ''}">${button.text ?? button.id ?? 'Action'}</button>`).join('')}
+        <button class="tg-button" type="button" data-menu-dismiss>Cancel</button>
+      </section>`;
+
+    fallback.addEventListener('click', event => {
+      const element = event.target instanceof Element ? event.target : null;
+      const choice = element?.closest<HTMLElement>('[data-menu-choice]')?.dataset.menuChoice;
+      if (choice) {
+        fallback.remove();
+        handleChoice(choice);
+        return;
+      }
+      if (element?.matches('[data-menu-dismiss]') || element === fallback) fallback.remove();
+    });
+    root.ownerDocument.body.append(fallback);
+  };
+
+  const onMenuClick = (event: Event): void => {
+    const element = event.target instanceof Element
+      ? event.target.closest<HTMLElement>('[data-tg-menu],[data-game-info]')
+      : null;
+    if (!element) return;
+    event.preventDefault();
+    event.stopPropagation();
+    openTopMenu();
+  };
+
+  root.addEventListener('click', onMenuClick, true);
+  return () => {
+    root.removeEventListener('click', onMenuClick, true);
+    root.ownerDocument.querySelector<HTMLElement>('[data-tg-menu-fallback]')?.remove();
+  };
+}
+
 export function mountTelegramPresentationController(
   root: HTMLElement,
   draft: TelegramPresentationDraft,
+  menuOptions: TelegramTopMenuOptions = {},
 ): () => void {
   syncDraft(root, draft);
+  const unmountMenu = mountTelegramTopMenuController(root, { ...menuOptions, inGame: false });
 
   const onClick = (event: Event): void => {
     const target = event.target instanceof Element ? event.target : null;
@@ -220,5 +371,6 @@ export function mountTelegramPresentationController(
     root.removeEventListener('input', onInput);
     root.removeEventListener('change', onInput);
     root.removeEventListener('keydown', onKeydown);
+    unmountMenu();
   };
 }
