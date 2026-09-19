@@ -68,6 +68,7 @@ export function bootstrap(root: HTMLElement, platform: PlatformAdapter, options:
     if (!state.credential) return;
     try {
       const projection = await api.getProjection(state.credential);
+      if (state.projection?.revision === projection.revision && state.error === null) return;
       setState({ projection, error: null });
     } catch (error) {
       setState({ error: errorText(error) });

@@ -261,6 +261,7 @@ test('Web view selection survives clean-client rerenders instead of snapping bac
   assert.equal((clientSource.match(/initialView: webView/g) || []).length, 2);
   assert.equal((clientSource.match(/onViewChange: \(nextView\) => \{ webView = nextView; \}/g) || []).length, 2);
   assert.match(clientSource, /window\.setInterval\(\(\) => \{ void refreshProjection\(\); \}, 1500\)/);
+  assert.match(clientSource, /state\.projection\?\.revision === projection\.revision && state\.error === null/);
 });
 
 test('Telegram setup controls have an active clean presentation controller', async () => {
