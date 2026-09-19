@@ -1,7 +1,7 @@
-import { createCribbitApiClient } from '@cribbit/api-client';
+import { CribbitApiError, createCribbitApiClient } from '@cribbit/api-client';
 import type { GameViewProjection, PlayerSessionCredential } from '@cribbit/contracts';
 import type { PlatformAdapter } from '@cribbit/platform/types';
-import { ensureCribbitStyles, mountGameTable, renderCribbitHome, renderCribbitLobby, type MountedGameTable } from '@cribbit/ui';
+import { createTelegramPresentationDraft, ensureCribbitStyles, mountGameTable, mountTelegramPresentationController, mountWebPresentationController, renderCribbitHome, renderCribbitLobby, type MountedGameTable, type WebProductView } from '@cribbit/ui';
 import { createFixturePreview } from './fixture-preview.ts';
 
 const mounted = new WeakSet<HTMLElement>();
@@ -28,6 +28,13 @@ function normalizeApiBaseUrl(apiBaseUrl: string | undefined): string | undefined
 }
 
 function errorText(error: unknown): string {
+  if (error instanceof CribbitApiError) {
+    if (error.code === 'SESSION_NOT_FOUND') return 'Room not found. Check the room code and try again.';
+    if (error.code === 'SESSION_ALREADY_STARTED') return 'That room has already started and cannot accept new players.';
+    if (error.code === 'PLAYER_ALREADY_JOINED') return 'This player is already in the room.';
+    if (error.code) return `The server rejected this action: ${error.code.replaceAll('_', ' ').toLowerCase()}.`;
+    return 'The Cribbit server could not complete that request. Please try again.';
+  }
   if (error instanceof Error) return error.message;
   return 'Unexpected Cribbit error';
 }
@@ -41,6 +48,10 @@ export function bootstrap(root: HTMLElement, platform: PlatformAdapter, options:
   const api = createCribbitApiClient({ baseUrl: normalizeApiBaseUrl(options.apiBaseUrl) });
   let state: AppState = { credential: null, projection: null, busy: false, error: null };
   let table: MountedGameTable | null = null;
+  let unmountWebPresentation: (() => void) | null = null;
+  let unmountTelegramPresentation: (() => void) | null = null;
+  let webView: WebProductView = 'lobby';
+  const telegramDraft = createTelegramPresentationDraft();
   let pollHandle: number | null = null;
 
   const stopPolling = (): void => {
@@ -120,39 +131,77 @@ export function bootstrap(root: HTMLElement, platform: PlatformAdapter, options:
   };
 
   function bindHome(): void {
+    const readCreateName = (): string =>
+      root.querySelector<HTMLInputElement>('[name="createName"], #profileName, [data-profile-input]')?.value.trim() || 'Player 1';
+    const readJoinSession = (): string | undefined =>
+      root.querySelector<HTMLInputElement>('[name="sessionId"], #joinCode, [data-join-code]')?.value.trim() || undefined;
+    const readJoinName = (): string =>
+      root.querySelector<HTMLInputElement>('[name="joinName"], #profileName, [data-profile-input]')?.value.trim() || 'Player 2';
+
     root.querySelector<HTMLFormElement>('[data-create-session]')?.addEventListener('submit', (event) => {
       event.preventDefault();
-      const input = root.querySelector<HTMLInputElement>('[name="createName"]');
-      createSession(input?.value.trim() || 'Player 1');
+      createSession(readCreateName());
+    });
+    root.querySelector<HTMLButtonElement>('#startGameButton, [data-action="create-game"]')?.addEventListener('click', (event) => {
+      event.preventDefault();
+      createSession(readCreateName());
     });
     root.querySelector<HTMLFormElement>('[data-join-session]')?.addEventListener('submit', (event) => {
       event.preventDefault();
-      const session = root.querySelector<HTMLInputElement>('[name="sessionId"]')?.value.trim();
-      const name = root.querySelector<HTMLInputElement>('[name="joinName"]')?.value.trim() || 'Player 2';
-      if (session) joinSession(session, name);
+      const session = readJoinSession();
+      if (session) joinSession(session, readJoinName());
+    });
+    root.querySelector<HTMLButtonElement>('[data-action="join-room"]')?.addEventListener('click', (event) => {
+      event.preventDefault();
+      const session = readJoinSession();
+      if (session) joinSession(session, readJoinName());
     });
   }
 
   function render(): void {
     ensureCribbitStyles();
+    unmountWebPresentation?.();
+    unmountWebPresentation = null;
+    unmountTelegramPresentation?.();
+    unmountTelegramPresentation = null;
     table?.();
     table = null;
     if (!state.projection || !state.credential) {
-      root.innerHTML = renderCribbitHome({ busy: state.busy, error: state.error });
+      root.innerHTML = renderCribbitHome({ busy: state.busy, error: state.error, surface: platform.kind });
       bindHome();
+      if (platform.kind === 'web') {
+        unmountWebPresentation = mountWebPresentationController(root, {
+          canOpenGame: () => Boolean(state.projection && state.projection.status !== 'waiting'),
+          canOpenRecap: () => Boolean(state.projection?.winner),
+          initialView: webView,
+          onViewChange: (nextView) => { webView = nextView; },
+        });
+      } else {
+        unmountTelegramPresentation = mountTelegramPresentationController(root, telegramDraft);
+      }
       return;
     }
 
     if (state.projection.status === 'waiting') {
-      root.innerHTML = renderCribbitLobby(state.projection, { busy: state.busy, error: state.error });
+      root.innerHTML = renderCribbitLobby(state.projection, { busy: state.busy, error: state.error, surface: platform.kind });
       root.querySelector<HTMLButtonElement>('[data-action="start-game"]')?.addEventListener('click', startGame);
+      if (platform.kind === 'web') {
+        unmountWebPresentation = mountWebPresentationController(root, {
+          canOpenGame: () => Boolean(state.projection && state.projection.status !== 'waiting'),
+          canOpenRecap: () => Boolean(state.projection?.winner),
+          initialView: webView,
+          onViewChange: (nextView) => { webView = nextView; },
+        });
+      } else {
+        unmountTelegramPresentation = mountTelegramPresentationController(root, telegramDraft);
+      }
       return;
     }
 
     root.innerHTML = '<div data-game-table-root></div>';
     const target = root.querySelector<HTMLElement>('[data-game-table-root]');
     if (!target) throw new Error('Game table mount missing');
-    table = mountGameTable(target, state.projection, { onDraw: drawCard, onPlay: playCard });
+    table = mountGameTable(target, state.projection, { onDraw: drawCard, onPlay: playCard }, platform.kind);
   }
 
   render();
@@ -160,6 +209,8 @@ export function bootstrap(root: HTMLElement, platform: PlatformAdapter, options:
 
   return () => {
     stopPolling();
+    unmountWebPresentation?.();
+    unmountTelegramPresentation?.();
     table?.();
     mounted.delete(root);
     delete root.dataset.accessSurface;
