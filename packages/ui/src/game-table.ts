@@ -1,4 +1,4 @@
-// What this does: renders clean-app server projections using the old Cribbit Telegram visual structure.
+// What this does: renders clean-app server projections through the old Cribbit Telegram/Web UI structure.
 // Key invariant: gameplay state, legality, and actions stay projection/handler-driven; this file adds no game authority.
 // Explicitly out of scope: old simulation/game-engine imports, client legality rules, or social/table-card expansion.
 import type { GameViewCard, GameViewProjection } from '../../contracts/src/view.ts';
@@ -16,34 +16,11 @@ export function createPresentationState(seed: Partial<PresentationState> = {}): 
 }
 
 const specialFamilies = new Set([
-  'truth',
-  'dare',
-  'paranoia',
-  'chaos',
-  'duel',
-  'nope',
-  'tag',
-  'truth_or_chaos',
-  'hijack',
-  'taboo',
-  'machiavelli',
-  'ghost',
-  'reverse_confession',
-  'dig_me',
-  'wild',
-  'reverse',
-  'skip',
-  'draw',
+  'truth','dare','paranoia','chaos','duel','nope','tag','truth_or_chaos','hijack','taboo','machiavelli','ghost','reverse_confession','dig_me','wild','reverse','skip','draw',
 ]);
 
 const esc = (value: string): string =>
-  value.replace(/[&<>\"']/g, char => ({
-    '&': '&amp;',
-    '<': '&lt;',
-    '>': '&gt;',
-    '\"': '&quot;',
-    "'": '&#039;',
-  })[char] ?? char);
+  value.replace(/[&<>\"']/g, char => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '\"': '&quot;', "'": '&#039;' })[char] ?? char);
 
 function cardIdentity(card: GameViewCard): CardPresentationIdentity | null {
   if (card.family !== 'number' && !specialFamilies.has(card.family)) return null;
@@ -56,16 +33,12 @@ function cardIdentity(card: GameViewCard): CardPresentationIdentity | null {
   };
 }
 
-export function GameCard(card: GameViewCard, selected = false, playable = false): string {
+export function GameCard(card: GameViewCard, selected = false, playable = false, board = false): string {
   const identity = cardIdentity(card);
   const asset = identity ? resolveCardFaceAsset(identity) : null;
-  const assetSrc = asset ? `/${asset}` : '';
   const tone = card.color ?? (specialFamilies.has(card.family) ? 'special' : 'neutral');
-  const face = assetSrc
-    ? `<img class="game-card__art" src="${esc(assetSrc)}" alt="${esc(card.label)} card" loading="lazy" decoding="async"/>`
-    : '';
-
-  return `<button class="game-card game-card--tg-hand" type="button" data-card-id="${esc(card.instanceId)}" data-selected="${selected}" data-playable="${playable}" data-family="${esc(card.family)}" data-tone="${tone}" data-asset="${esc(asset ?? '')}" aria-pressed="${selected}" aria-disabled="${String(!playable)}">${face}<span class="game-card__corner">${esc(card.label)}</span><span class="game-card__mark">${esc(card.family === 'number' ? card.label : card.label.slice(0, 3).toUpperCase())}</span><span class="game-card__name">${esc(card.label)}</span>${playable ? '<span class="game-card__legal-badge">PLAY</span>' : ''}</button>`;
+  const face = asset ? `<img class="game-card__art" src="/${asset}" alt="${esc(card.label)} card" loading="lazy" decoding="async"/>` : '';
+  return `<button class="game-card ${board ? 'game-card--tg-board' : 'game-card--tg-hand'}" type="button" data-card-id="${esc(card.instanceId)}" data-selected="${selected}" data-playable="${playable}" data-family="${esc(card.family)}" data-tone="${tone}" data-asset="${esc(asset ?? '')}" aria-pressed="${selected}" aria-disabled="${String(!playable)}">${face}<span class="game-card__corner">${esc(card.label)}</span><span class="game-card__mark">${esc(card.family === 'number' ? card.label : card.label.slice(0, 3).toUpperCase())}</span><span class="game-card__name">${esc(card.label)}</span>${playable ? '<span class="game-card__legal-badge">PLAY</span>' : ''}</button>`;
 }
 
 export function PlayerSeat(player: GameViewProjection['players'][number]): string {
@@ -77,7 +50,7 @@ export function DrawPile(count: number, enabled = false): string {
 }
 
 export function DiscardPile(card: GameViewCard | null): string {
-  return `<article class="table-pile tg-board-zone tg-board-zone--discard"><span class="tg-board-zone__label">DISCARD</span><div class="discard-pile tg-discard-stack">${card ? GameCard(card).replace('game-card--tg-hand', 'game-card--tg-board') : '<span class="tg-empty-pile">No discard</span>'}</div></article>`;
+  return `<article class="table-pile tg-board-zone tg-board-zone--discard"><span class="tg-board-zone__label">DISCARD</span><div class="discard-pile tg-discard-stack">${card ? GameCard(card, false, false, true) : '<span class="tg-empty-pile">No discard</span>'}</div></article>`;
 }
 
 export function TurnIndicator(projection: GameViewProjection): string {
@@ -99,7 +72,7 @@ export function ConnectionStatus(projection: GameViewProjection): string {
 }
 
 export function ColorChooser(open: boolean): string {
-  return `<section class="color-chooser tg-wild-picker${open ? ' is-open' : ''}" aria-hidden="${!open}"><b>Choose color</b><div><button data-preview-color="lime">Lime</button><button data-preview-color="orange">Orange</button><button data-preview-color="cyan">Cyan</button><button data-preview-color="purple">Purple</button></div><small>Color commands are disabled until Wild is implemented.</small></section>`;
+  return `<section class="color-chooser tg-wild-picker${open ? ' is-open' : ''}" aria-hidden="${!open}"><div><b>Choose color</b><button data-preview-color="lime">Lime</button><button data-preview-color="orange">Orange</button><button data-preview-color="cyan">Cyan</button><button data-preview-color="purple">Purple</button><small>Color commands are disabled until Wild is implemented.</small></div></section>`;
 }
 
 export function SpecialEffectSheet(openEffect: string | null): string {
@@ -111,19 +84,22 @@ export function PlayerHand(projection: GameViewProjection, state: PresentationSt
   return `<section class="hand-zone tg-hand" aria-label="Your hand"><div class="tg-section-label"><span>Your Hand</span><strong>${projection.currentPlayer.hand.length}</strong></div><div class="hand-scroll tg-hand-rail">${projection.currentPlayer.hand.map(card => GameCard(card, state.selectedCardId === card.instanceId, playable.has(card.instanceId))).join('') || '<p class="tg-hand-empty">Your hand is empty.</p>'}</div></section>`;
 }
 
+function AppHeader(title: string, subtitle: string, right = '•••'): string {
+  return `<header class="tg-app__header"><button class="tg-icon-button tg-icon-button--back" type="button" aria-label="Cribbit">●</button><div class="tg-app__title-block"><strong>${esc(title)}</strong><span>${esc(subtitle)}</span></div><button class="tg-icon-button" type="button" aria-label="Menu">${esc(right)}</button></header>`;
+}
+
 export function GameTable(projection: GameViewProjection, state: PresentationState): string {
   const currentName = projection.players.find(player => player.isCurrentTurn)?.displayName ?? projection.turnLabel;
-  const sourceCopy = projection.source === 'server' ? 'Server projection · authoritative' : 'Fixture preview · non-authoritative';
-
-  return `<main class="cribbit-app tg-app tg-game-page" data-source="${projection.source}" data-telegram-app><header class="app-header tg-app__header tg-game-header"><button class="tg-icon-button tg-icon-button--back" type="button" aria-label="Cribbit home">←</button><div class="tg-app__title-block"><strong>Cribbit Chaos</strong><span>${esc(sourceCopy)}</span></div><div class="header-tools">${ConnectionStatus(projection)}</div></header><section class="tg-live-strip" aria-label="Game status"><span class="tg-live-dot" aria-hidden="true"></span><strong>${projection.status === 'active' ? 'LIVE GAME' : projection.status.toUpperCase()}</strong><span>rev ${projection.revision}</span></section><section class="tg-game-meta" aria-label="Room and turn information"><div class="tg-game-meta__room"><span class="tg-game-meta__mark" aria-hidden="true">●</span><div><small>ROOM</small><strong>${esc(projection.roomName)}</strong><span>${projection.players.length} players · ${esc(projection.modeLabel)} · ${esc(projection.sessionId)}</span></div></div>${TurnIndicator({ ...projection, turnLabel: currentName })}</section><section class="tg-board" aria-label="Card board"><div class="tg-board__piles">${DiscardPile(projection.discardCard)}${DrawPile(projection.drawPileCount, projection.availableActions.canDraw)}</div></section><section class="tg-player-strip" aria-label="Players"><div class="tg-section-label"><span>Players</span><strong>${projection.players.length}</strong></div><div class="player-list tg-player-rail">${projection.players.map(PlayerSeat).join('')}</div></section>${projection.activeEffect ? `<section class="tg-active-state" aria-live="polite"><small>ACTIVE STATE</small><strong>${esc(projection.activeEffect)}</strong><span>Resolved from the server projection.</span></section>` : ''}${PlayerHand(projection, state)}${ActionBar(projection, state)}${GameStatus(projection)}${SpecialEffectSheet(state.openEffect)}${ColorChooser(state.colorChooserOpen)}</main>`;
+  const sourceCopy = projection.source === 'server' ? 'Server projection' : 'Fixture preview';
+  return `<main class="cribbit-app tg-app tg-game-page" data-source="${projection.source}" data-telegram-app>${AppHeader('Cribbit Chaos', sourceCopy, projection.connection === 'connected' ? '✓' : '!')}<section class="tg-live-strip" aria-label="Game status"><span class="tg-live-dot" aria-hidden="true"></span><strong>${projection.status === 'active' ? 'LIVE GAME' : projection.status.toUpperCase()}</strong><span>rev ${projection.revision}</span></section><section class="tg-game-meta" aria-label="Room and turn information"><div class="tg-game-meta__room"><span class="tg-game-meta__mark" aria-hidden="true">●</span><div><small>ROOM</small><strong>${esc(projection.roomName)}</strong><span>${projection.players.length} players · ${esc(projection.modeLabel)} · ${esc(projection.sessionId)}</span></div></div>${TurnIndicator({ ...projection, turnLabel: currentName })}</section><section class="tg-board" aria-label="Card board"><div class="tg-board__piles">${DiscardPile(projection.discardCard)}${DrawPile(projection.drawPileCount, projection.availableActions.canDraw)}</div></section><section class="tg-player-strip" aria-label="Players"><div class="tg-section-label"><span>Players</span><strong>${projection.players.length}</strong></div><div class="player-list tg-player-rail">${projection.players.map(PlayerSeat).join('')}</div></section>${projection.activeEffect ? `<section class="tg-active-state" aria-live="polite"><small>ACTIVE STATE</small><strong>${esc(projection.activeEffect)}</strong><span>Resolved from the server projection.</span></section>` : ''}${PlayerHand(projection, state)}${ActionBar(projection, state)}${GameStatus(projection)}${SpecialEffectSheet(state.openEffect)}${ColorChooser(state.colorChooserOpen)}</main>`;
 }
 
 export function renderCribbitHome(input: { readonly busy: boolean; readonly error: string | null }): string {
-  return `<main class="cribbit-app tg-app tg-setup-page" data-telegram-app><header class="app-header tg-app__header"><button class="tg-icon-button tg-icon-button--back" type="button" aria-label="Cribbit">●</button><div class="tg-app__title-block"><strong>Cribbit Chaos</strong><span>Web + Telegram</span></div><button class="tg-icon-button" type="button" aria-label="Menu">•••</button></header><section class="tg-live-strip" aria-label="Room setup status"><span class="tg-live-dot" aria-hidden="true"></span><strong>CREATE OR JOIN</strong><span>server rooms</span></section><section class="tg-room-hero"><div class="tg-room-hero__kicker"><span class="tg-frog-mark">●</span>Cribbit CHAOS</div><h1><span>Build</span> <span>Room</span></h1><p>Create or join a real server-authoritative room. Gameplay state comes from the Railway API projection.</p></section><section class="tg-room-form"><article class="tg-setup-card"><div class="tg-section-label"><span>Create session</span><small>new room</small></div><p class="tg-card-copy">Start a real Cribbit room backed by server state.</p><form data-create-session><label class="tg-field-label" for="createName"><span>Player</span>Name</label><div class="tg-input-wrap"><input class="tg-input" id="createName" name="createName" placeholder="Your name" autocomplete="name" ${input.busy ? 'disabled' : ''}/><span class="tg-field-icon">✦</span></div><button class="tg-button tg-button--create" type="submit" ${input.busy ? 'disabled' : ''}>Create Session</button></form></article><article class="tg-setup-card"><div class="tg-section-label"><span>Join session</span><small>room code</small></div><p class="tg-card-copy">Enter the code from another browser or Telegram preview.</p><form data-join-session><label class="tg-field-label" for="sessionId"><span>Room</span>Code</label><div class="tg-input-wrap"><input class="tg-input" id="sessionId" name="sessionId" placeholder="Session ID" autocomplete="off" ${input.busy ? 'disabled' : ''}/><span class="tg-field-icon">#</span></div><label class="tg-field-label" for="joinName"><span>Player</span>Name</label><div class="tg-input-wrap"><input class="tg-input" id="joinName" name="joinName" placeholder="Your name" autocomplete="name" ${input.busy ? 'disabled' : ''}/><span class="tg-field-icon">✦</span></div><button class="tg-button tg-button--join" type="submit" ${input.busy ? 'disabled' : ''}>Join Session</button></form></article>${input.error ? `<div class="tg-action-status" data-tone="warning" role="status">${esc(input.error)}</div>` : ''}</section></main>`;
+  return `<main class="cribbit-app tg-app tg-setup-page" data-telegram-app>${AppHeader('Cribbit Chaos', 'Web + Telegram')}<section class="tg-live-strip" aria-label="Room setup status"><span class="tg-live-dot" aria-hidden="true"></span><strong>CREATE OR JOIN</strong><span>server rooms</span></section><section class="tg-room-form" aria-label="Create or join Cribbit room"><article class="tg-setup-card"><div class="tg-section-label"><span>Create session</span><small>new room</small></div><p class="tg-card-copy">Start a real Cribbit room backed by server state.</p><form data-create-session><label class="tg-field-label" for="createName"><span>Player</span>Name</label><div class="tg-input-wrap"><input class="tg-input" id="createName" name="createName" placeholder="Your name" autocomplete="name" ${input.busy ? 'disabled' : ''}/><span class="tg-field-icon">✦</span></div><button class="tg-button tg-button--create" type="submit" ${input.busy ? 'disabled' : ''}>Create Session</button></form></article><article class="tg-setup-card"><div class="tg-section-label"><span>Join session</span><small>room code</small></div><p class="tg-card-copy">Enter the code from another browser or Telegram preview.</p><form data-join-session><label class="tg-field-label" for="sessionId"><span>Room</span>Code</label><div class="tg-input-wrap"><input class="tg-input" id="sessionId" name="sessionId" placeholder="Session ID" autocomplete="off" ${input.busy ? 'disabled' : ''}/><span class="tg-field-icon">#</span></div><label class="tg-field-label" for="joinName"><span>Player</span>Name</label><div class="tg-input-wrap"><input class="tg-input" id="joinName" name="joinName" placeholder="Your name" autocomplete="name" ${input.busy ? 'disabled' : ''}/><span class="tg-field-icon">✦</span></div><button class="tg-button tg-button--join" type="submit" ${input.busy ? 'disabled' : ''}>Join Session</button></form></article>${input.error ? `<div class="tg-action-status" data-tone="warning" role="status">${esc(input.error)}</div>` : ''}</section></main>`;
 }
 
 export function renderCribbitLobby(projection: GameViewProjection, input: { readonly busy: boolean; readonly error: string | null }): string {
-  return `<main class="cribbit-app tg-app tg-lobby-page" data-source="${projection.source}" data-telegram-app><header class="app-header tg-app__header"><button class="tg-icon-button tg-icon-button--back" type="button" aria-label="Cribbit">●</button><div class="tg-app__title-block"><strong>Cribbit Chaos</strong><span>${esc(projection.modeLabel)}</span></div><div class="header-tools">${ConnectionStatus(projection)}</div></header><section class="tg-live-strip" aria-label="Lobby status"><span class="tg-live-dot" aria-hidden="true"></span><strong>LOBBY</strong><span>rev ${projection.revision}</span></section><section class="tg-game-meta" aria-label="Room information"><div class="tg-game-meta__room"><span class="tg-game-meta__mark" aria-hidden="true">●</span><div><small>ROOM</small><strong>${esc(projection.roomName)}</strong><span>Share code · ${esc(projection.sessionId)}</span></div></div></section><section class="tg-player-strip" aria-label="Joined players"><div class="tg-section-label"><span>Joined players</span><strong>${projection.players.length}</strong></div><div class="player-list tg-player-rail">${projection.players.map(PlayerSeat).join('')}</div></section><section class="tg-board tg-lobby-board" aria-label="Host controls"><div class="tg-active-state"><small>HOST CONTROL</small><strong>${projection.canStartGame ? 'Ready to start' : 'Waiting for second player'}</strong><span>Start Game creates the canonical deck, initial hands, draw pile, discard pile and first turn on the server.</span><div class="context-actions"><button type="button" data-action="start-game" ${projection.canStartGame && !input.busy ? '' : 'disabled'}>START GAME</button></div>${input.error ? `<div class="tg-action-status" data-tone="warning" role="status">${esc(input.error)}</div>` : ''}</div></section></main>`;
+  return `<main class="cribbit-app tg-app tg-lobby-page" data-source="${projection.source}" data-telegram-app>${AppHeader('Cribbit Chaos', projection.modeLabel, projection.connection === 'connected' ? '✓' : '!')}<section class="tg-live-strip" aria-label="Lobby status"><span class="tg-live-dot" aria-hidden="true"></span><strong>LOBBY</strong><span>rev ${projection.revision}</span></section><section class="tg-game-meta" aria-label="Room information"><div class="tg-game-meta__room"><span class="tg-game-meta__mark" aria-hidden="true">●</span><div><small>ROOM</small><strong>${esc(projection.roomName)}</strong><span>Share code · ${esc(projection.sessionId)}</span></div></div></section><section class="tg-player-strip" aria-label="Joined players"><div class="tg-section-label"><span>Joined players</span><strong>${projection.players.length}</strong></div><div class="player-list tg-player-rail">${projection.players.map(PlayerSeat).join('')}</div></section><section class="tg-board tg-lobby-board" aria-label="Host controls"><div class="tg-active-state"><small>HOST CONTROL</small><strong>${projection.canStartGame ? 'Ready to start' : 'Waiting for second player'}</strong><span>Start Game creates the canonical deck, initial hands, draw pile, discard pile and first turn on the server.</span><div class="context-actions"><button type="button" data-action="start-game" ${projection.canStartGame && !input.busy ? '' : 'disabled'}>START GAME</button></div>${input.error ? `<div class="tg-action-status" data-tone="warning" role="status">${esc(input.error)}</div>` : ''}</div></section></main>`;
 }
 
 export const renderGameTable = GameTable;
