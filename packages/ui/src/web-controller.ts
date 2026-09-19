@@ -16,6 +16,8 @@ export type WebProductView =
 export interface WebPresentationControllerOptions {
   readonly canOpenGame?: () => boolean;
   readonly canOpenRecap?: () => boolean;
+  readonly initialView?: WebProductView;
+  readonly onViewChange?: (view: WebProductView) => void;
 }
 
 interface PromptPreview {
@@ -441,8 +443,13 @@ export function mountWebPresentationController(
   const profileInput = query<HTMLInputElement>(root, '#profileName');
   const worldInput = query<HTMLSelectElement>(root, '#worldSelect');
   const activeView = query<HTMLElement>(root, '.view.is-active')?.dataset.view;
+  const requestedInitialView = options.initialView;
   const state: PresentationState = {
-    view: VIEWS.has(activeView as WebProductView) ? activeView as WebProductView : 'lobby',
+    view: requestedInitialView && VIEWS.has(requestedInitialView)
+      ? requestedInitialView
+      : VIEWS.has(activeView as WebProductView)
+        ? activeView as WebProductView
+        : 'lobby',
     boardTab: 'all',
     libraryTab: 'my',
     createDestination: 'my',
@@ -473,6 +480,7 @@ export function mountWebPresentationController(
       button.setAttribute('aria-current', button.getAttribute('data-nav') === next ? 'page' : 'false');
     });
     renderView(root, state);
+    options.onViewChange?.(next);
     resetViewScroll(root);
   };
 
@@ -480,6 +488,7 @@ export function mountWebPresentationController(
   renderLibrary(root, state);
   renderCreate(root, state);
   renderRooms(root, state);
+  showView(state.view);
 
   const onClick = (event: Event): void => {
     const target = event.target instanceof Element ? event.target : null;

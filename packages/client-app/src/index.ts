@@ -1,7 +1,7 @@
 import { CribbitApiError, createCribbitApiClient } from '@cribbit/api-client';
 import type { GameViewProjection, PlayerSessionCredential } from '@cribbit/contracts';
 import type { PlatformAdapter } from '@cribbit/platform/types';
-import { ensureCribbitStyles, mountGameTable, mountWebPresentationController, renderCribbitHome, renderCribbitLobby, type MountedGameTable } from '@cribbit/ui';
+import { ensureCribbitStyles, mountGameTable, mountWebPresentationController, renderCribbitHome, renderCribbitLobby, type MountedGameTable, type WebProductView } from '@cribbit/ui';
 import { createFixturePreview } from './fixture-preview.ts';
 
 const mounted = new WeakSet<HTMLElement>();
@@ -49,6 +49,7 @@ export function bootstrap(root: HTMLElement, platform: PlatformAdapter, options:
   let state: AppState = { credential: null, projection: null, busy: false, error: null };
   let table: MountedGameTable | null = null;
   let unmountWebPresentation: (() => void) | null = null;
+  let webView: WebProductView = 'lobby';
   let pollHandle: number | null = null;
 
   const stopPolling = (): void => {
@@ -168,6 +169,8 @@ export function bootstrap(root: HTMLElement, platform: PlatformAdapter, options:
         unmountWebPresentation = mountWebPresentationController(root, {
           canOpenGame: () => Boolean(state.projection && state.projection.status !== 'waiting'),
           canOpenRecap: () => Boolean(state.projection?.winner),
+          initialView: webView,
+          onViewChange: (nextView) => { webView = nextView; },
         });
       }
       return;
@@ -180,6 +183,8 @@ export function bootstrap(root: HTMLElement, platform: PlatformAdapter, options:
         unmountWebPresentation = mountWebPresentationController(root, {
           canOpenGame: () => Boolean(state.projection && state.projection.status !== 'waiting'),
           canOpenRecap: () => Boolean(state.projection?.winner),
+          initialView: webView,
+          onViewChange: (nextView) => { webView = nextView; },
         });
       }
       return;
