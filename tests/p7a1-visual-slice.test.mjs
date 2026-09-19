@@ -158,9 +158,9 @@ test('Web shell and live game keep the extracted old template structure active',
   const { OLD_PACKAGES_UI_SRC_TEMPLATE_HTML } = await import('../packages/ui/src/old-ui-source/source-text.ts');
   const preview = createFixturePreview();
   const homeHtml = renderCribbitHome({ busy: false, error: null, surface: 'web' });
-  assert.match(homeHtml, /data-action="open-room-creation"[^>]*>Create a game<\/a>/);
-  assert.match(homeHtml, /id="startGameButton" data-action="create-game"[^>]*>[\s\S]*Create Game<\/button>/);
-  assert.doesNotMatch(homeHtml, /Start simulated game/);
+  assert.match(homeHtml, /<a class="button cc-web-create" href="#roomCreation">Create a game<\/a>/);
+  assert.match(homeHtml, /id="startGameButton"[^>]*>[\s\S]*Start simulated game<\/button>/);
+  assert.doesNotMatch(homeHtml, />Create Game<\/button>/);
   const lobbyHtml = renderCribbitLobby(preview.projection, { busy: false, error: null, surface: 'web' });
   const gameHtml = renderGameTable(preview.projection, createPresentationState(), 'web');
 
@@ -248,12 +248,24 @@ test('Web controller keeps persistent prompt/library mutations disabled until cl
 });
 
 
-test('Web room creation CTA is explicitly wired to the setup section', async () => {
+test('Web room creation CTA preserves the old anchor and is wired to the setup section', async () => {
   const fs = await import('node:fs/promises');
   const clientSource = await fs.readFile(new URL('../packages/client-app/src/index.ts', import.meta.url), 'utf8');
-  assert.match(clientSource, /data-action="open-room-creation"/);
+  assert.match(clientSource, /a\.cc-web-create\[href="#roomCreation"\]/);
   assert.match(clientSource, /#roomCreation/);
   assert.match(clientSource, /scrollIntoView\(\{ block: 'start', behavior: 'smooth' \}\)/);
+});
+
+test('Start simulated game uses the clean fixture preview instead of creating a server session', async () => {
+  const fs = await import('node:fs/promises');
+  const clientSource = await fs.readFile(new URL('../packages/client-app/src/index.ts', import.meta.url), 'utf8');
+
+  assert.match(clientSource, /let simulationProjection: GameViewProjection \| null = null;/);
+  assert.match(clientSource, /simulationProjection = createFixturePreview\(\)\.projection;/);
+  assert.match(clientSource, /querySelector<HTMLButtonElement>\('#startGameButton'\)/);
+  assert.match(clientSource, /startSimulation\(\);/);
+  assert.match(clientSource, /mountGameTable\(target, simulationProjection, \{\}, platform\.kind\)/);
+  assert.doesNotMatch(clientSource, /legacy-runtime|canonical-game-runtime|@cribbit\/game-engine/);
 });
 
 test('Web view selection survives clean-client rerenders instead of snapping back to Lobby', async () => {

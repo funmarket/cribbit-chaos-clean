@@ -51,6 +51,7 @@ export function bootstrap(root: HTMLElement, platform: PlatformAdapter, options:
   let unmountWebPresentation: (() => void) | null = null;
   let unmountTelegramPresentation: (() => void) | null = null;
   let webView: WebProductView = 'lobby';
+  let simulationProjection: GameViewProjection | null = null;
   const telegramDraft = createTelegramPresentationDraft();
   let pollHandle: number | null = null;
 
@@ -88,6 +89,7 @@ export function bootstrap(root: HTMLElement, platform: PlatformAdapter, options:
   };
 
   const createSession = (displayName: string): void => {
+    simulationProjection = null;
     void withBusy(async () => {
       const result = await api.createSession({ displayName });
       state = { credential: result.credential, projection: result.projection, busy: false, error: null };
@@ -97,12 +99,19 @@ export function bootstrap(root: HTMLElement, platform: PlatformAdapter, options:
   };
 
   const joinSession = (sessionId: string, displayName: string): void => {
+    simulationProjection = null;
     void withBusy(async () => {
       const result = await api.joinSession({ sessionId, displayName });
       state = { credential: result.credential, projection: result.projection, busy: false, error: null };
       ensurePolling();
       render();
     });
+  };
+
+  const startSimulation = (): void => {
+    simulationProjection = createFixturePreview().projection;
+    webView = 'game';
+    render();
   };
 
   const startGame = (): void => {
@@ -143,11 +152,15 @@ export function bootstrap(root: HTMLElement, platform: PlatformAdapter, options:
       event.preventDefault();
       createSession(readCreateName());
     });
-    root.querySelector<HTMLElement>('[data-action="open-room-creation"]')?.addEventListener('click', (event) => {
+    root.querySelector<HTMLAnchorElement>('a.cc-web-create[href="#roomCreation"]')?.addEventListener('click', (event) => {
       event.preventDefault();
       root.querySelector<HTMLElement>('#roomCreation')?.scrollIntoView({ block: 'start', behavior: 'smooth' });
     });
-    root.querySelector<HTMLButtonElement>('#startGameButton, [data-action="create-game"]')?.addEventListener('click', (event) => {
+    root.querySelector<HTMLButtonElement>('#startGameButton')?.addEventListener('click', (event) => {
+      event.preventDefault();
+      startSimulation();
+    });
+    root.querySelector<HTMLButtonElement>('[data-action="create-game"]')?.addEventListener('click', (event) => {
       event.preventDefault();
       createSession(readCreateName());
     });
@@ -171,6 +184,13 @@ export function bootstrap(root: HTMLElement, platform: PlatformAdapter, options:
     unmountTelegramPresentation = null;
     table?.();
     table = null;
+    if (simulationProjection) {
+      root.innerHTML = '<div data-game-table-root></div>';
+      const target = root.querySelector<HTMLElement>('[data-game-table-root]');
+      if (!target) throw new Error('Simulation table mount missing');
+      table = mountGameTable(target, simulationProjection, {}, platform.kind);
+      return;
+    }
     if (!state.projection || !state.credential) {
       root.innerHTML = renderCribbitHome({ busy: state.busy, error: state.error, surface: platform.kind });
       bindHome();
