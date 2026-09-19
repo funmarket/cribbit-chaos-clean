@@ -140,7 +140,7 @@ function query<T extends Element>(root: ParentNode, selector: string): T | null 
 }
 
 function queryAll<T extends Element>(root: ParentNode, selector: string): T[] {
-  return [...root.querySelectorAll<T>(selector)];
+  return Array.from(root.querySelectorAll<T>(selector));
 }
 
 function promptAccent(prompt: PromptPreview): string {
