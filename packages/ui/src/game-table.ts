@@ -139,7 +139,7 @@ function applyOldWebMainPresentation(html: string): string {
 
         <div class="cc-web-infobar"><span class="cc-web-infobar-shield">🛡️</span><div class="cc-web-infobar-text"><b>Explicit safety controls built in.</b> Pass, Rewind, Nope and Flag keep CHAOS on your terms.</div></div>
 
-        <div class="cc-web-actions"><a class="button cc-web-create" href="#roomCreation">Create a game</a>${startButton}</div>
+        <div class="cc-web-actions"><a class="button cc-web-create" href="#roomCreation" data-action="open-room-creation">Create a game</a>${startButton}</div>
       </div>
     </div>
         </article>`;
@@ -410,7 +410,9 @@ export function renderCribbitHome(input: { readonly busy: boolean; readonly erro
     ...({} as GameViewProjection),
     source: 'fixture-preview', sessionId: '', roomName: 'Night Squad', modeLabel: 'Party', round: 1, revision: 0, status: 'waiting', connection: 'connected', players: [], currentPlayer: { playerId: '', hand: [] }, drawPileCount: 0, discardCard: null, activeColor: null, direction: 'clockwise', currentTurnPlayerId: null, activeEffect: null, turnLabel: 'You', winner: null, canStartGame: false, availableActions: { canDraw: false, playableCardIds: [] },
   } as GameViewProjection;
-  return hydrateWebTemplate(fixture, createPresentationState(), 'lobby', input);
+  return hydrateWebTemplate(fixture, createPresentationState(), 'lobby', input)
+    .replace('id="startGameButton" data-action="start-game"', 'id="startGameButton" data-action="create-game"')
+    .replace('Start simulated game', 'Create Game');
 }
 
 export function renderCribbitLobby(projection: GameViewProjection, input: { readonly busy: boolean; readonly error: string | null; readonly surface?: 'web' | 'telegram' }): string {

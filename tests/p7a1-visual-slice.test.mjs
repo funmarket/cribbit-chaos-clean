@@ -158,6 +158,9 @@ test('Web shell and live game keep the extracted old template structure active',
   const { OLD_PACKAGES_UI_SRC_TEMPLATE_HTML } = await import('../packages/ui/src/old-ui-source/source-text.ts');
   const preview = createFixturePreview();
   const homeHtml = renderCribbitHome({ busy: false, error: null, surface: 'web' });
+  assert.match(homeHtml, /data-action="open-room-creation"[^>]*>Create a game<\/a>/);
+  assert.match(homeHtml, /id="startGameButton" data-action="create-game"[^>]*>[\s\S]*Create Game<\/button>/);
+  assert.doesNotMatch(homeHtml, /Start simulated game/);
   const lobbyHtml = renderCribbitLobby(preview.projection, { busy: false, error: null, surface: 'web' });
   const gameHtml = renderGameTable(preview.projection, createPresentationState(), 'web');
 
@@ -244,6 +247,14 @@ test('Web controller keeps persistent prompt/library mutations disabled until cl
   assert.doesNotMatch(controllerSource, /localStorage|sessionStorage/);
 });
 
+
+test('Web room creation CTA is explicitly wired to the setup section', async () => {
+  const fs = await import('node:fs/promises');
+  const clientSource = await fs.readFile(new URL('../packages/client-app/src/index.ts', import.meta.url), 'utf8');
+  assert.match(clientSource, /data-action="open-room-creation"/);
+  assert.match(clientSource, /#roomCreation/);
+  assert.match(clientSource, /scrollIntoView\(\{ block: 'start', behavior: 'smooth' \}\)/);
+});
 
 test('Web view selection survives clean-client rerenders instead of snapping back to Lobby', async () => {
   const fs = await import('node:fs/promises');

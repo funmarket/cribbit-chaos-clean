@@ -143,6 +143,10 @@ export function bootstrap(root: HTMLElement, platform: PlatformAdapter, options:
       event.preventDefault();
       createSession(readCreateName());
     });
+    root.querySelector<HTMLElement>('[data-action="open-room-creation"]')?.addEventListener('click', (event) => {
+      event.preventDefault();
+      root.querySelector<HTMLElement>('#roomCreation')?.scrollIntoView({ block: 'start', behavior: 'smooth' });
+    });
     root.querySelector<HTMLButtonElement>('#startGameButton, [data-action="create-game"]')?.addEventListener('click', (event) => {
       event.preventDefault();
       createSession(readCreateName());
