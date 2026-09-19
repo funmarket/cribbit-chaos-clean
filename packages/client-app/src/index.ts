@@ -1,4 +1,4 @@
-import { createCribbitApiClient } from '@cribbit/api-client';
+import { CribbitApiError, createCribbitApiClient } from '@cribbit/api-client';
 import type { GameViewProjection, PlayerSessionCredential } from '@cribbit/contracts';
 import type { PlatformAdapter } from '@cribbit/platform/types';
 import { ensureCribbitStyles, mountGameTable, mountWebPresentationController, renderCribbitHome, renderCribbitLobby, type MountedGameTable } from '@cribbit/ui';
@@ -28,6 +28,13 @@ function normalizeApiBaseUrl(apiBaseUrl: string | undefined): string | undefined
 }
 
 function errorText(error: unknown): string {
+  if (error instanceof CribbitApiError) {
+    if (error.code === 'SESSION_NOT_FOUND') return 'Room not found. Check the room code and try again.';
+    if (error.code === 'SESSION_ALREADY_STARTED') return 'That room has already started and cannot accept new players.';
+    if (error.code === 'PLAYER_ALREADY_JOINED') return 'This player is already in the room.';
+    if (error.code) return `The server rejected this action: ${error.code.replaceAll('_', ' ').toLowerCase()}.`;
+    return 'The Cribbit server could not complete that request. Please try again.';
+  }
   if (error instanceof Error) return error.message;
   return 'Unexpected Cribbit error';
 }

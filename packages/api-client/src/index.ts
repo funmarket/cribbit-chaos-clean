@@ -13,6 +13,20 @@ export interface CribbitApiClientOptions {
   readonly fetchImpl?: typeof fetch;
 }
 
+export class CribbitApiError extends Error {
+  readonly status: number;
+  readonly code: string | null;
+  readonly payload: unknown;
+
+  constructor(input: { readonly status: number; readonly code?: string | null; readonly payload: unknown }) {
+    super(input.code ? `Cribbit API rejected request: ${input.code}` : `Cribbit API request failed with ${input.status}`);
+    this.name = 'CribbitApiError';
+    this.status = input.status;
+    this.code = input.code ?? null;
+    this.payload = input.payload;
+  }
+}
+
 export interface CribbitApiClient {
   createSession(input: { readonly displayName: string }): Promise<SessionProjectionResponse>;
   joinSession(input: { readonly sessionId: string; readonly displayName: string }): Promise<SessionProjectionResponse>;
@@ -28,7 +42,12 @@ function joinUrl(baseUrl: string, path: string): string {
 
 async function decodeJson<T>(response: Response): Promise<T> {
   const payload = await response.json() as T;
-  if (!response.ok) throw Object.assign(new Error(`Cribbit API request failed with ${response.status}`), { payload, status: response.status });
+  if (!response.ok) {
+    const code = payload && typeof payload === 'object' && 'code' in payload && typeof payload.code === 'string'
+      ? payload.code
+      : null;
+    throw new CribbitApiError({ status: response.status, code, payload });
+  }
   return payload;
 }
 
