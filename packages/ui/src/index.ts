@@ -24,7 +24,13 @@ export function mountGameTable(root: HTMLElement, projection: GameViewProjection
     const target = event.target instanceof Element ? event.target : null;
     if (!target) return;
     if (target.closest('[data-action="draw-card"]')) { handlers.onDraw?.(); return; }
-    if (target.closest('[data-action="play-card"]')) { if (state.selectedCardId) handlers.onPlay?.(state.selectedCardId); return; }
+    const playTarget = target.closest<HTMLElement>('[data-action="play-card"]');
+    if (playTarget) {
+      const directCard = playTarget.closest<HTMLElement>('[data-card-id]');
+      const cardId = directCard?.dataset.cardId ?? state.selectedCardId;
+      if (cardId) handlers.onPlay?.(cardId);
+      return;
+    }
     if (target.closest('[data-action="start-game"]')) { handlers.onStart?.(); return; }
     const card = target.closest<HTMLElement>('[data-card-id]');
     if (card) {
