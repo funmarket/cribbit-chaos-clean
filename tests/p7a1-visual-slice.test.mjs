@@ -243,3 +243,65 @@ test('Web controller keeps persistent prompt/library mutations disabled until cl
   assert.match(controllerSource, /persistent prompt creation will only be enabled through the clean server API/);
   assert.doesNotMatch(controllerSource, /localStorage|sessionStorage/);
 });
+
+
+test('Web view selection survives clean-client rerenders instead of snapping back to Lobby', async () => {
+  const fs = await import('node:fs/promises');
+  const [clientSource, controllerSource] = await Promise.all([
+    fs.readFile(new URL('../packages/client-app/src/index.ts', import.meta.url), 'utf8'),
+    fs.readFile(new URL('../packages/ui/src/web-controller.ts', import.meta.url), 'utf8'),
+  ]);
+
+  assert.match(controllerSource, /initialView\?: WebProductView/);
+  assert.match(controllerSource, /onViewChange\?: \(view: WebProductView\) => void/);
+  assert.match(controllerSource, /options\.onViewChange\?\.\(next\)/);
+  assert.match(controllerSource, /showView\(state\.view\);/);
+
+  assert.match(clientSource, /let webView: WebProductView = 'lobby';/);
+  assert.equal((clientSource.match(/initialView: webView/g) || []).length, 2);
+  assert.equal((clientSource.match(/onViewChange: \(nextView\) => \{ webView = nextView; \}/g) || []).length, 2);
+  assert.match(clientSource, /window\.setInterval\(\(\) => \{ void refreshProjection\(\); \}, 1500\)/);
+});
+
+test('Telegram setup controls have an active clean presentation controller', async () => {
+  const fs = await import('node:fs/promises');
+  const [{ createTelegramPresentationDraft }, clientSource, controllerSource] = await Promise.all([
+    import('../packages/ui/src/telegram-controller.ts'),
+    fs.readFile(new URL('../packages/client-app/src/index.ts', import.meta.url), 'utf8'),
+    fs.readFile(new URL('../packages/ui/src/telegram-controller.ts', import.meta.url), 'utf8'),
+  ]);
+
+  assert.deepEqual(createTelegramPresentationDraft('Tester'), {
+    profileName: 'Tester',
+    roomName: 'Night Squad',
+    world: 'clean',
+    ceiling: 3,
+    mode: 'party',
+    playerCount: 5,
+    sources: { original: true, community: true, house: true, live: true },
+    qaHand: true,
+  });
+
+  for (const marker of [
+    '[data-mode]',
+    '[data-player-count]',
+    '[data-source]',
+    '[data-world]',
+    '[data-ceiling]',
+    '[data-qa-hand]',
+    '[data-join-code]',
+    '[data-tg-back]',
+    '[data-tg-menu]',
+  ]) {
+    const escaped = marker.replace(/[.*+?^$()|[\]\\]/g, '\\$&');
+    assert.match(controllerSource, new RegExp(escaped));
+  }
+
+  assert.match(controllerSource, /Fast head-to-head pacing\./);
+  assert.match(controllerSource, /Balanced teaching format\./);
+  assert.match(controllerSource, /Primary social format\./);
+  assert.match(controllerSource, /Shorter timers, more anti-downtime\./);
+  assert.match(controllerSource, /event\.key !== 'Enter'/);
+  assert.match(clientSource, /mountTelegramPresentationController\(root, telegramDraft\)/);
+  assert.doesNotMatch(controllerSource, /legacy-runtime|canonical-game-runtime|@cribbit\/game-engine|backendGame|simulation\.ts/);
+});
