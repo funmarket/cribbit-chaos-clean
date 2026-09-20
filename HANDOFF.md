@@ -76,6 +76,64 @@ A task becomes `PASS` only when its required evidence is collected for the exact
 
 Do not skip ahead to schema mutation or engine salvage until the active presentation baseline is reconciled according to Phase 1.
 
+### 0.6 Branch authority registry - transitional state
+
+This registry exists so a new agent can immediately identify where active work lives. It is intentionally transitional until the repository-governance phase is completed.
+
+Verified live state at the time this registry was introduced:
+
+| Branch / PR | Role now | Agent rule |
+|---|---|---|
+| `main` @ `c970711d53fcc64eacd7937db5e421768d3b9ce6` | Default/stable historical baseline | Do **not** assume it contains the latest HANDOFF/AGENTS/product work. Do not start new feature work from it until `REPO-003` establishes the accepted canonical baseline. |
+| `integration/clean-rebuild` @ `bf5a0715dfe5cfdf3363e1f608921b2e57c5a245` | Historical integration pointer | Do not use as a new-work base until `REPO-003` decides whether to retain and refresh it. |
+| `phase/p7a-playable-visual-slice` @ `714d70c7a55ff4e15f78fb3159473207a7db2990` | Current PR #9 base | Reference/base only while PR #9 is open; do not branch new unrelated work from it. |
+| `work-old-ui-full-extract` | **Current active work branch** | This is the current execution branch. Verify its exact live HEAD before every task. |
+| PR `#9` | **Current active UI extraction PR** | Current candidate path; exact-head hosted proof remains required by `BASE-001`. |
+| `work-old-ui-extraction-port-v2` / PR `#8` | Superseded UI candidate pending formal classification | Do not continue from it. Do not close/delete until `REPO-001/002` verifies it is safe. |
+| `work-old-ui-extraction-port` | Superseded UI candidate pending formal classification | Do not continue from it. |
+| older `phase/*` branches | Historical milestone/reference branches | Read-only reference unless HANDOFF explicitly selects one. |
+| `ci/cloudflare-api-worker`, `docs/recovery-charter`, `work-cross-blob-test` | Historical/experimental candidates pending classification | Do not use as active work bases. |
+
+Current authority summary:
+
+```text
+CANONICAL DEFAULT/STABLE BRANCH: main (historical/stale relative to active work until REPO-003)
+CURRENT ACTIVE WORK BRANCH:      work-old-ui-full-extract
+CURRENT ACTIVE PR:               #9
+CURRENT ACTIVE TASK:             BASE-001
+CURRENT PR BASE:                 phase/p7a-playable-visual-slice
+```
+
+Agents must verify these facts live before acting. A stale registry never overrides GitHub.
+
+### 0.7 Future branch naming convention
+
+After the current UI candidate is reconciled and repository governance is established, new implementation branches should map directly to one HANDOFF task:
+
+```text
+task/<TASK-ID>-<short-slug>
+```
+
+Examples:
+
+```text
+task/DB-001-schema-authority
+task/LIFE-001-auth
+task/ENG-003-turn-effects
+task/SOC-005-duel
+task/MEDIA-004-prompt-narration
+```
+
+Rules:
+
+- one active HANDOFF task per task branch;
+- branch name must contain the HANDOFF task ID;
+- no ambiguous new `work-*` or `phase/*` branch naming after `REPO-005` passes;
+- no direct feature implementation on `main`;
+- no new task may choose a base branch by guesswork;
+- the accepted base for each task must be identified by HANDOFF/live Git state;
+- historical branches remain read-only unless a specific recovery task names them.
+
 ---
 
 # 1. Product mission and end state
@@ -1693,6 +1751,127 @@ After authorized merge:
 
 ---
 
+## PHASE 1A - Repository governance and branch convergence
+
+This phase prevents multiple agents from developing against different historical realities. Planning is authorized now; branch/PR cleanup remains gated.
+
+### `REPO-000` - Branch-governance roadmap baseline
+
+**Status:** `PASS`
+
+Planning result:
+
+- branch authority is explicitly recorded in this HANDOFF;
+- `BASE-001` remains the current task;
+- actual branch deletion, PR closure, merge, integration-branch movement, default-branch movement, or branch protection changes are **not** authorized by this planning task;
+- future work uses `task/<TASK-ID>-<slug>` after the governance cutover is proven.
+
+### `REPO-001` - Read-only branch and PR classification
+
+**Status:** `BLOCKED`
+
+Prerequisite:
+
+- `BASE-001 PASS`.
+
+Read-only deliverable:
+
+For every live branch and open PR, classify it as exactly one of:
+
+- `ACTIVE_AUTHORITY`
+- `ACTIVE_BASE`
+- `HISTORICAL_REFERENCE`
+- `SUPERSEDED_SAFE_TO_CLOSE`
+- `SUPERSEDED_SAFE_TO_DELETE_AFTER_APPROVAL`
+- `PRESERVE_UNIQUE_WORK`
+- `UNKNOWN/BLOCKED`
+
+Required evidence:
+
+- exact branch HEAD;
+- upstream/base relationship;
+- open PR relationship;
+- whether commits/files exist only on that branch;
+- whether any deployment or active environment still references it;
+- whether its content is already represented in the accepted candidate.
+
+This task performs no mutation.
+
+### `REPO-002` - Close superseded PRs
+
+**Status:** `BLOCKED`
+
+Prerequisites:
+
+- `REPO-001 PASS`;
+- affected PRs classified `SUPERSEDED_SAFE_TO_CLOSE`;
+- explicit owner authorization for the exact PR closures.
+
+No branch deletion in this task.
+
+### `REPO-003` - Establish canonical repository baseline
+
+**Status:** `BLOCKED`
+
+Prerequisites:
+
+- `BASE-002 PASS`;
+- `BASE-003 PASS` / owner-approved accepted UI baseline;
+- exact candidate SHA verified;
+- exact governance files verified on the accepted candidate.
+
+Target state:
+
+- `main` becomes the unambiguous accepted stable branch and contains current `AGENTS.md`, `HANDOFF.md`, `gamerules.md`, and accepted application state;
+- default branch remains or becomes `main`;
+- a new agent opening the repository root on the default branch immediately sees the live governance files;
+- `integration/clean-rebuild` is either:
+  - explicitly retained and advanced to a current integration role, or
+  - formally retired from active-work authority;
+- the chosen branch flow is recorded here before subsequent task branches are created.
+
+Any merge, base movement, or shared-branch update requires its own explicit authorization and exact-state verification.
+
+### `REPO-004` - Historical/superseded branch cleanup
+
+**Status:** `BLOCKED`
+
+Prerequisites:
+
+- `REPO-001 PASS`;
+- `REPO-003 PASS`;
+- every target branch classified safe for removal;
+- no active deployment/PR/tool references the target branch;
+- explicit owner authorization for exact branch deletions.
+
+Delete only branches proven redundant. Preserve branches containing unique work until that work is intentionally integrated or archived.
+
+No force-push/history rewrite.
+
+### `REPO-005` - Enforce branch/task workflow
+
+**Status:** `BLOCKED`
+
+Prerequisites:
+
+- `REPO-003 PASS`.
+
+Target rules:
+
+- new feature/fix branches use `task/<TASK-ID>-<slug>`;
+- each branch maps to one HANDOFF task;
+- task branches start from the currently accepted base declared by the roadmap;
+- PR titles/body identify the HANDOFF task ID;
+- `main` accepts reviewed/gated candidates, not ad hoc feature commits;
+- branch protection/status-check policy is added only if separately authorized and configured against the actual CI workflow;
+- HANDOFF branch authority registry is updated whenever the active task branch or accepted baseline changes.
+
+Acceptance:
+
+A new agent with no chat history can open the default branch, read `AGENTS.md` and `HANDOFF.md`, identify the accepted baseline, active task, active branch/PR, and next task without inspecting historical branches.
+
+---
+
 ## PHASE 2 - Database authority and environment cleanup
 
 ### `DB-001` - Final schema design and migration-authority decision
@@ -2460,6 +2639,7 @@ Agents append concise evidence rows. Do not turn this into a chat transcript.
 | 2026-09-20 | GOV-001 | PASS | `HANDOFF.md` commit `129450ea2edb842c9b3363947a865f869305d3a8`; `AGENTS.md` commit `112b2a49c084c499488be42520836e4555058d29` | Both governance files read back on the active branch. No gameplay/DB/deploy/merge mutation occurred. |
 | 2026-09-20 | BASE-001 | NOT STARTED | Exact-head hosted interaction evidence required | This is the next roadmap task. |
 | 2026-09-20 | MEDIA-000 | PASS | Audio/media architecture incorporated into the living roadmap | Planning only. No audio source, DB, object-storage, worker, deploy, merge, or gameplay mutation; BASE-001 remains NEXT TASK. |
+| 2026-09-20 | REPO-000 | PASS | Branch-governance registry and post-BASE-001 cleanup roadmap added | Planning only. No branch deletion, PR closure, merge, branch movement, deployment, or source mutation; BASE-001 remains NEXT TASK. |
 
 ---
 
@@ -2489,7 +2669,8 @@ Operational blockers currently visible:
 - Railway API currently references the service named staging DB while running inside the environment named production;
 - no canonical merged post-UI-extraction baseline yet;
 - full donor engine port is not present remotely;
-- current architecture documentation elsewhere may describe older phases and must be reconciled as its relevant phase is reached.
+- current architecture documentation elsewhere may describe older phases and must be reconciled as its relevant phase is reached;
+- repository branch authority remains transitional: `main` and `integration/clean-rebuild` are behind current active work, PR #9 is open, PR #8 is still open, and multiple historical/superseded branches remain until `REPO-001` classifies them.
 
 Audio/media product locks still requiring explicit later decision before the affected feature is implemented:
 
@@ -2526,6 +2707,10 @@ Agents must not:
 
 The project can be called complete only when all boxes are genuinely supported by exact-state evidence:
 
+- [ ] Default branch exposes current AGENTS/HANDOFF governance
+- [ ] Accepted stable branch and active task-branch workflow are unambiguous
+- [ ] Superseded PRs/branches are classified and safely retired or preserved
+- [ ] New work uses task/<TASK-ID>-<slug> branch naming
 - [ ] Canonical identity/auth in production
 - [ ] Canonical Room lifecycle
 - [ ] Canonical Room -> Game start boundary
