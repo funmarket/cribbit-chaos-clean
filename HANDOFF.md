@@ -1308,7 +1308,7 @@ Performance gates before launch should include:
 
 ### `GOV-001` - Install canonical living handoff and agent contract
 
-**Status:** `PASS` once `HANDOFF.md` and updated `AGENTS.md` exist on the active project branch and are read back.
+**Status:** `PASS`
 
 Deliverables:
 
@@ -1957,7 +1957,7 @@ Agents append concise evidence rows. Do not turn this into a chat transcript.
 
 | Date | Task | Status | Candidate / Evidence | Notes |
 |---|---|---|---|---|
-| 2026-09-20 | GOV-001 | IN PROGRESS -> PASS when repository readback completes | Functional baseline `d2c64517cce51e132c77b25f8f67ceab6c0a5c73` | Living handoff + agent contract introduced; no gameplay/DB/deploy mutation authorized by this task. |
+| 2026-09-20 | GOV-001 | PASS | `HANDOFF.md` commit `129450ea2edb842c9b3363947a865f869305d3a8`; `AGENTS.md` commit `112b2a49c084c499488be42520836e4555058d29` | Both governance files read back on the active branch. No gameplay/DB/deploy/merge mutation occurred. |
 | 2026-09-20 | BASE-001 | NOT STARTED | Exact-head hosted interaction evidence required | This is the next roadmap task. |
 
 ---
