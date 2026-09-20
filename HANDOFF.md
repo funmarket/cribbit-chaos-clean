@@ -72,9 +72,136 @@ A task becomes `PASS` only when its required evidence is collected for the exact
 
 ### 0.5 Current roadmap pointer
 
-**NEXT TASK:** `BASE-001 - Exact-head hosted interaction proof for the current UI extraction candidate.`
+**NEXT TASK:** `BASE-001A - Exact-head staging infrastructure alignment and data classification.`
 
-Do not skip ahead to schema mutation or engine salvage until the active presentation baseline is reconciled according to Phase 1.
+`BASE-001` is temporarily blocked until `BASE-001A` proves that the current Web and Telegram previews, current CLEAN API, and intended staging PostgreSQL path are aligned to one exact candidate.
+
+Do not skip ahead to special-card work, engine salvage, schema mutation, production activation, branch cleanup, or merge work until this staging-alignment gate is complete.
+
+### 0.5A Locked infrastructure convergence plan - owner approved 2026-09-20
+
+This is the canonical no-drift plan for repairing the current hosted version/environment mismatch. It is intentionally stored in `HANDOFF.md` rather than a temporary plan file.
+
+#### Verified problem
+
+At the time this plan was locked:
+
+- active source branch: `work-old-ui-full-extract`;
+- current accepted source candidate before this documentation update: `b5393beb9b9443c5d4016dd5455a1370d1b86918`;
+- current Web and Telegram Cloudflare previews were built from that same candidate;
+- both previews used one Railway API URL, which is architecturally correct;
+- that Railway API was still deployed from `phase/p7a-playable-visual-slice` at `714d70c7a55ff4e15f78fb3159473207a7db2990`;
+- the Railway API's `DATABASE_URL` explicitly referenced service `547949fb-4d2b-4459-ad90-fcf8de29021a`, `cribbit-chaos-clean-staging-db`;
+- Railway had one environment named `production` containing the API, the staging DB service, and the production DB service;
+- the production DB service `184642ac-a5cc-4d89-9c7e-58ac4e5f92f4` was not the API's current database target.
+
+Therefore the current hosted mismatch is version/environment skew, not a reason to rebuild CLEAN again:
+
+```text
+current Web + Telegram previews
+            |
+            v
+older Railway API contract
+            |
+            v
+staging DB service inside ambiguously named Railway environment
+```
+
+#### Permanent target
+
+Development/staging must converge to:
+
+```text
+Web staging preview --------\
+                             > ONE staging Railway API -> ONE staging PostgreSQL
+Telegram staging preview ---/
+```
+
+Production remains isolated and inactive for feature development:
+
+```text
+Web production --------\
+                        > ONE production Railway API -> ONE production PostgreSQL
+Telegram production ---/
+```
+
+Web and Telegram never get separate APIs, game engines, user stores, or databases.
+
+#### Execution order - do not reorder
+
+1. **Read-only data classification**
+   - inspect both existing Railway PostgreSQL services;
+   - record schema/migration state and non-secret row-count/data-preservation facts;
+   - classify staging data as disposable or preservation-required;
+   - classify production data separately;
+   - no migration, reset, DROP, copy, or data mutation in this gate.
+
+2. **Establish real staging topology**
+   - create/use an explicit Railway staging environment;
+   - staging API must reference only the intended staging DB;
+   - keep production DB isolated;
+   - do not activate current partial game source against production.
+
+3. **Canonical staging database**
+   - if staging is proven disposable, initialize staging from the one CLEAN migration authority rather than carrying obsolete test-era schema families forward;
+   - if any non-disposable data is found, stop and require a specific preservation/migration plan;
+   - never infer production-data safety from staging evidence.
+
+4. **Exact-head staging API**
+   - deploy the accepted CLEAN candidate to the staging API;
+   - verify its Git SHA, environment identity, required secret/config existence, database target, health, and migration state;
+   - current Web and Telegram staging previews must target this one staging API.
+
+5. **Cloudflare preview alignment**
+   - Web preview and Telegram preview both use `VITE_APP_ENV=staging`;
+   - both use the same staging API URL;
+   - production Pages configuration remains separate and must not be used as the development target.
+
+6. **Hosted auth and cross-client proof**
+   - Web-only account path works;
+   - Telegram-only account path works;
+   - optional linking resolves both methods to the same canonical `users.id`;
+   - username equality never performs linking.
+
+7. **Hosted game proof**
+   - Web/Telegram create/join the same room/session;
+   - host start works;
+   - exactly seven cards are dealt;
+   - draw and ordinary legal play work;
+   - revisions synchronize both ways;
+   - private hands remain isolated;
+   - refresh/reconnect reads persisted authoritative state.
+
+8. **Deployment identity guard**
+   - expose or otherwise verify frontend build SHA and API Git SHA/environment identity;
+   - every hosted acceptance gate begins by proving the tested Web, Telegram, and API artifacts belong to the intended candidate;
+   - a mismatched SHA stops acceptance immediately.
+
+9. **Retire stale active routing only after replacement proof**
+   - the old `714d70c7...` API must stop serving current CLEAN previews after the aligned staging API is proven;
+   - do not delete historical deployments, branches, databases, or PRs under this gate;
+   - cleanup remains separately authorized work.
+
+10. **Return to product construction**
+    - after staging convergence and `BASE-001` pass, stop expanding infrastructure scope;
+    - continue canonical room/game lifecycle, donor mechanics matrix, core engine, forced/social rules, prompts/Roulette, bots, timers, and canonical simulation.
+
+#### Hard guards
+
+Until explicitly authorized by the matching task:
+
+- no mutation to `main`;
+- no merge to protected/stable branches;
+- no production DB migration/reset;
+- no staging-to-production data copy;
+- no separate Web API;
+- no separate Telegram API;
+- no second game engine;
+- no special-card implementation while the exact-head staging foundation is unproven;
+- no deletion of old deployment/DB/branch evidence merely because it is stale;
+- no temporary FIX/plan/scratch file committed to GitHub.
+
+Infrastructure work follows **BUILD -> VERIFY -> SHOW/PLAY** and exact-state evidence. A green source CI run does not prove a deployed API is on that SHA.
 
 ### 0.6 Branch authority registry - transitional state
 
@@ -100,7 +227,7 @@ Current authority summary:
 CANONICAL DEFAULT/STABLE BRANCH: main (historical/stale relative to active work until REPO-003)
 CURRENT ACTIVE WORK BRANCH:      work-old-ui-full-extract
 CURRENT ACTIVE PR:               #9
-CURRENT ACTIVE TASK:             BASE-001
+CURRENT ACTIVE TASK:             BASE-001A
 CURRENT PR BASE:                 phase/p7a-playable-visual-slice
 ```
 
@@ -2014,9 +2141,40 @@ Gate:
 
 ## PHASE 1 - Baseline convergence and presentation freeze
 
-### `BASE-001` - Exact-head hosted interaction proof
+### `BASE-001A` - Exact-head staging infrastructure alignment and data classification
 
 **Status:** `NOT STARTED`
+
+Goal:
+
+Remove the verified hosted version/environment skew without changing product architecture.
+
+Ordered gate:
+
+1. inspect both Railway DB services read-only and classify preservation requirements;
+2. prove or establish an explicit staging environment and staging DB ownership;
+3. align the staging API to the accepted CLEAN candidate and intended staging DB;
+4. align both Cloudflare preview surfaces to that one staging API;
+5. prove exact deployed version/environment identity before gameplay acceptance.
+
+Acceptance:
+
+- no production DB mutation occurred;
+- no `main` mutation or merge occurred;
+- Web and Telegram previews target one staging API;
+- staging API runs the accepted CLEAN candidate;
+- staging API targets only the intended staging DB;
+- schema/migration state is explicitly verified;
+- stale `714d70c7...` backend is no longer the active API for current CLEAN previews after replacement proof;
+- exact live identifiers/evidence are recorded here before `BASE-001` begins.
+
+No special-card, prompt, bot, timer, simulation-engine, branch-cleanup, or unrelated product implementation belongs in this task.
+
+### `BASE-001` - Exact-head hosted interaction proof
+
+**Status:** `BLOCKED`
+
+**Prerequisite:** `BASE-001A PASS`.
 
 Goal:
 
@@ -2212,6 +2370,12 @@ No DB or object-storage mutation in this task.
 ### `DB-002` - Railway staging/production environment topology
 
 **Status:** `NOT STARTED`
+
+Relationship to Phase 1:
+
+- `BASE-001A` may establish only the minimum real staging topology required to unblock exact-head hosted proof;
+- this task remains the broader environment-governance gate for the final explicit staging/production topology;
+- production activation/migration is not implied by `BASE-001A`.
 
 Target:
 
@@ -3023,7 +3187,8 @@ Agents append concise evidence rows. Do not turn this into a chat transcript.
 | 2026-09-20 | SIM-000 | IN PROGRESS | Source repair commits `3b2c2a5f` -> `47cc745a` -> `8b58c457` | Owner confirmed **Start simulated game** is safe to extract. Source paths are separated; exact-state CI + hosted no-flicker proof still required. BASE-001 remains NEXT TASK. |
 | 2026-09-20 | ARCH-001 | PASS | Single Product / Cross-Client Identity Invariant added to HANDOFF | Owner locked Web and Telegram as presentation adapters over the same canonical user/identity/room/game/prompt/permissions/API/engine/PostgreSQL authority. No source, DB, deployment, branch, or NEXT TASK change. |
 | 2026-09-20 | LIFE-001 / LIFE-001A / ACC-004 / ACC-004A | IN PROGRESS | Source convergence candidate `11e7ef29be068a1a16cfc2f26e061fedb04072f0`; CI run `35531377108` PASS | Shared canonical user/auth/game principal path and automated cross-client identity/game proof implemented. No Railway DB migration, API deployment, merge, or production activation performed. `BASE-001` remains NEXT TASK. |
-| 2026-09-20 | LIFE-001B | IN PROGRESS | Optional login-method source update in current candidate | Telegram-only and Web-only accounts are first-class; linking is optional; Telegram username is suggestion metadata only; username equality never auto-links. Hosted account UI/proof remains later work. `BASE-001` remains NEXT TASK. |
+| 2026-09-20 | LIFE-001B | IN PROGRESS | Optional login-method source update in current candidate | Telegram-only and Web-only accounts are first-class; linking is optional; Telegram username is suggestion metadata only; username equality never auto-links. Hosted account UI/proof remains later work. `BASE-001` was the next task at that point. |
+| 2026-09-20 | BASE-001A | NOT STARTED | Verified hosted skew: current Web/Telegram previews on `b5393beb...`; Railway API still on `714d70c7...`; API DB reference resolves to `cribbit-chaos-clean-staging-db` inside Railway environment named `production` | Owner approved the locked convergence plan in section 0.5A. Documentation-only update; no Railway, Cloudflare, DB, source, `main`, merge, or deployment mutation. `BASE-001A` is now NEXT TASK and `BASE-001` is blocked on it. |
 
 ---
 
