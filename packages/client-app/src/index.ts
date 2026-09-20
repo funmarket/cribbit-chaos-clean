@@ -126,26 +126,31 @@ export function bootstrap(root: HTMLElement, platform: PlatformAdapter, options:
   };
 
   const startGame = (): void => {
-    if (!state.player) return;
+    const player = state.player;
+    if (!player) return;
     void withBusy(async () => {
-      const projection = await api.startGame(state.player.sessionId);
+      const projection = await api.startGame(player.sessionId);
       setState({ projection });
     });
   };
 
   const drawCard = (): void => {
-    if (!state.player || !state.projection) return;
+    const player = state.player;
+    const projection = state.projection;
+    if (!player || !projection) return;
     void withBusy(async () => {
-      const result = await api.drawCard(state.player.sessionId, state.projection?.revision ?? 0);
+      const result = await api.drawCard(player.sessionId, projection.revision);
       if (!result.ok) throw new Error(result.reason ?? result.code);
       setState({ projection: result.projection });
     });
   };
 
   const playCard = (cardInstanceId: string): void => {
-    if (!state.player || !state.projection) return;
+    const player = state.player;
+    const projection = state.projection;
+    if (!player || !projection) return;
     void withBusy(async () => {
-      const result = await api.playCard(state.player.sessionId, state.projection?.revision ?? 0, cardInstanceId);
+      const result = await api.playCard(player.sessionId, projection.revision, cardInstanceId);
       if (!result.ok) throw new Error(result.reason ?? result.code);
       setState({ projection: result.projection });
     });

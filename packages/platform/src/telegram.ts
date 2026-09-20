@@ -15,7 +15,8 @@ export function createTelegramAdapter(): PlatformAdapter {
     kind: 'telegram',
     getAuthHeaders() {
       const initData = window.Telegram?.WebApp?.initData?.trim() ?? '';
-      return initData ? { authorization: `tma ${initData}` } : {};
+      const headers: HeadersInit = initData ? { authorization: `tma ${initData}` } : {};
+      return headers;
     }
   };
 }
