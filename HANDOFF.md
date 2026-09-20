@@ -1601,6 +1601,46 @@ Clients may not:
 
 The simulation page is a harness, not an engine.
 
+## 17.0 Owner lock - extracted simulation entry point
+
+Owner decision recorded 2026-09-20:
+
+- the exact old Web **Start simulated game** presentation/control is safe to extract and preserve;
+- it is a simulation/harness entry point, not the live host start control;
+- **Start simulated game** and **Start Game** must remain distinct in label, action, and event binding;
+- extracted simulation presentation is allowed, but the old simulation runtime/engine is not production authority.
+
+Canonical distinction:
+
+```text
+Start simulated game
+  -> data-action="demo-game"
+  -> simulation/harness path
+
+Start Game
+  -> data-action="start-game"
+  -> authenticated live room/game start path
+```
+
+Never rename or repurpose the extracted simulation button into the live start button during rendering. Never attach overlapping simulation listeners to both an element ID and its simulation action.
+
+### `SIM-000` - Simulation entry-point authority and duplicate-control repair
+
+**Status:** `IN PROGRESS`
+
+Source repair evidence:
+
+- `3b2c2a5fc7f88e9092223de46f2012ad4445c623` - keeps the extracted **Start simulated game** control as `data-action="demo-game"` and introduces a separate live **Start Game** control;
+- `47cc745ad3400aeaba29eba17336e16a0c7da7b1` - removes the duplicate ID-specific simulation listener and binds simulation controls through one action-based binder;
+- `8b58c457a8c68d49db4e68822891fdf4be86b3a0` - adds regression assertions that the simulation label/action stays stable and the live start action remains separate.
+
+Remaining proof before `SIM-000` may become `PASS`:
+
+- exact-state CI on the final repair candidate;
+- hosted browser proof that the button no longer flickers between **Start simulated game** and **Start Game**;
+- hosted proof remains part of current `BASE-001`, so `BASE-001` remains the roadmap's `NEXT TASK`.
+
+
 Target:
 
 ```text
@@ -2640,6 +2680,7 @@ Agents append concise evidence rows. Do not turn this into a chat transcript.
 | 2026-09-20 | BASE-001 | NOT STARTED | Exact-head hosted interaction evidence required | This is the next roadmap task. |
 | 2026-09-20 | MEDIA-000 | PASS | Audio/media architecture incorporated into the living roadmap | Planning only. No audio source, DB, object-storage, worker, deploy, merge, or gameplay mutation; BASE-001 remains NEXT TASK. |
 | 2026-09-20 | REPO-000 | PASS | Branch-governance registry and post-BASE-001 cleanup roadmap added | Planning only. No branch deletion, PR closure, merge, branch movement, deployment, or source mutation; BASE-001 remains NEXT TASK. |
+| 2026-09-20 | SIM-000 | IN PROGRESS | Source repair commits `3b2c2a5f` -> `47cc745a` -> `8b58c457` | Owner confirmed **Start simulated game** is safe to extract. Source paths are separated; exact-state CI + hosted no-flicker proof still required. BASE-001 remains NEXT TASK. |
 
 ---
 
