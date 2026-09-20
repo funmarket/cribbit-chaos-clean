@@ -91,7 +91,9 @@ export function bootstrap(root: HTMLElement, platform: PlatformAdapter, options:
   const createSession = (displayName: string): void => {
     simulationProjection = null;
     void withBusy(async () => {
-      if (platform.kind === 'telegram') await api.ensureTelegramAccount();\n      else await api.ensureWebGuest({ displayName });\n      const result = await api.createSession({ displayName });
+      if (platform.kind === 'telegram') await api.ensureTelegramAccount();
+      else await api.ensureWebGuest({ displayName });
+      const result = await api.createSession({ displayName });
       state = { player: result.player, projection: result.projection, busy: false, error: null };
       ensurePolling();
       render();
@@ -101,7 +103,9 @@ export function bootstrap(root: HTMLElement, platform: PlatformAdapter, options:
   const joinSession = (sessionId: string, displayName: string): void => {
     simulationProjection = null;
     void withBusy(async () => {
-      if (platform.kind === 'telegram') await api.ensureTelegramAccount();\n      else await api.ensureWebGuest({ displayName });\n      const result = await api.joinSession({ sessionId, displayName });
+      if (platform.kind === 'telegram') await api.ensureTelegramAccount();
+      else await api.ensureWebGuest({ displayName });
+      const result = await api.joinSession({ sessionId, displayName });
       state = { player: result.player, projection: result.projection, busy: false, error: null };
       ensurePolling();
       render();
