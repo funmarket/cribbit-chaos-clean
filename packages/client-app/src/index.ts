@@ -147,6 +147,15 @@ export function bootstrap(root: HTMLElement, platform: PlatformAdapter, options:
     });
   };
 
+  const bindSimulationControls = (): void => {
+    root.querySelectorAll<HTMLButtonElement>('[data-action="demo-game"]').forEach(button => {
+      button.addEventListener('click', (event) => {
+        event.preventDefault();
+        startSimulation();
+      });
+    });
+  };
+
   function bindHome(): void {
     const readCreateName = (): string =>
       root.querySelector<HTMLInputElement>('[name="createName"], #profileName, [data-profile-input]')?.value.trim() || 'Player 1';
@@ -163,10 +172,6 @@ export function bootstrap(root: HTMLElement, platform: PlatformAdapter, options:
       event.preventDefault();
       root.querySelector<HTMLElement>('#roomCreation')?.scrollIntoView({ block: 'start', behavior: 'smooth' });
     });
-    root.querySelector<HTMLButtonElement>('#startGameButton')?.addEventListener('click', (event) => {
-      event.preventDefault();
-      startSimulation();
-    });
     root.querySelector<HTMLButtonElement>('[data-action="create-game"]')?.addEventListener('click', (event) => {
       event.preventDefault();
       createSession(readCreateName());
@@ -181,10 +186,7 @@ export function bootstrap(root: HTMLElement, platform: PlatformAdapter, options:
       const session = readJoinSession();
       if (session) joinSession(session, readJoinName());
     });
-    root.querySelector<HTMLButtonElement>('[data-action="demo-game"]')?.addEventListener('click', (event) => {
-      event.preventDefault();
-      startSimulation();
-    });
+    bindSimulationControls();
   }
 
   function render(): void {
@@ -231,6 +233,7 @@ export function bootstrap(root: HTMLElement, platform: PlatformAdapter, options:
     if (state.projection.status === 'waiting') {
       root.innerHTML = renderCribbitLobby(state.projection, { busy: state.busy, error: state.error, surface: platform.kind });
       root.querySelector<HTMLButtonElement>('[data-action="start-game"]')?.addEventListener('click', startGame);
+      bindSimulationControls();
       if (platform.kind === 'web') {
         unmountWebPresentation = mountWebPresentationController(root, {
           canOpenGame: () => Boolean(state.projection && state.projection.status !== 'waiting'),
