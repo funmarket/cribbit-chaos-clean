@@ -11,9 +11,14 @@ import {
 } from './auth-password.ts';
 
 export class AuthServiceError extends Error {
-  constructor(readonly status: number, readonly code: string, message: string) {
+  readonly status: number;
+  readonly code: string;
+
+  constructor(status: number, code: string, message: string) {
     super(message);
     this.name = 'AuthServiceError';
+    this.status = status;
+    this.code = code;
   }
 }
 
