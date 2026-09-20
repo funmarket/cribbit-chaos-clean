@@ -177,6 +177,11 @@ The project is considered production-ready only when all of the following are tr
 23. Prompt narration and approved voice prompt recording work on Web and Telegram with privacy-aware media projection.
 24. Audio bytes live in object storage, not PostgreSQL or canonical game-state JSON.
 25. Media retention, consent, moderation state, orphan cleanup, and expiring playback/upload authorization are production-safe.
+26. Web and Telegram are proven as two frontends for the same Cribbit product, never separate games.
+27. The same person can authenticate through Web and Telegram and resolve to the same canonical `users.id` after secure account linking.
+28. Web and Telegram share the same room memberships, game sessions, hands, turns, revisions, prompts, libraries, saved data, rules, commands, permissions, backend services, and PostgreSQL authority.
+29. A player may move between Web and Telegram without creating a new game identity, room identity, seat, hand, or history record.
+30. Cross-client end-to-end tests prove Web + Telegram interoperability and same-person identity continuity.
 
 ---
 
@@ -205,7 +210,183 @@ These are permanent unless the owner explicitly supersedes them.
 | Game SFX / UI sounds | versioned client presentation assets/catalog |
 | Living execution plan | this `HANDOFF.md` |
 
-## 2.2 Forbidden authority duplication
+## 2.2 Single Product / Cross-Client Identity Invariant
+
+This is a permanent owner-locked architecture rule.
+
+> **Web and Telegram are two frontends for the same Cribbit product, not two separate games.**
+
+Canonical topology:
+
+```text
+Web frontend
+        \
+         -> packages/api-client -> same Railway API -> same application services -> same game-engine -> same PostgreSQL
+        /
+Telegram frontend
+```
+
+Only presentation and platform adapters differ.
+
+The following authorities are shared across both clients:
+
+- one canonical user account;
+- one canonical identity graph;
+- one room-membership model;
+- one game-session model;
+- one set of game players/seats;
+- one canonical hand/turn/revision state;
+- one prompt/library/saved-content model;
+- one rule set;
+- one command language/contracts;
+- one backend service boundary;
+- one database authority;
+- one permissions/authorization model.
+
+There must never be a parallel Web domain and Telegram domain for any of those concepts.
+
+### Canonical identity model
+
+The identity relationship is:
+
+```text
+users
+  ^
+user_identities
+  |- web/password or Web auth identity
+  |- telegram identity
+  \- future providers
+```
+
+Multiple proven login methods may map to **one canonical `users.id`**.
+
+Example:
+
+```text
+users.id = U1
+
+user_identities:
+  (U1, provider=telegram, provider_user_id=<telegram-id>)
+  (U1, provider=web_email, provider_user_id=<verified-web-identity>)
+```
+
+All durable product ownership references canonical `users.id`, including:
+
+- room membership;
+- game-player identity for human seats;
+- profiles;
+- saved prompts and prompt libraries;
+- media ownership;
+- history;
+- permissions;
+- active-game recovery.
+
+Do not create platform-specific ownership columns such as `telegram_user_id` or `web_user_id` in room/game/content tables.
+
+### Secure account linking
+
+The system must support multiple login methods without guessing identity equivalence.
+
+Rules:
+
+1. First proven login may create a canonical `users.id` and attach that provider identity.
+2. Linking another login method requires proof of control over the already authenticated canonical account **and** proof of control over the second identity.
+3. `user_identities` must enforce unique provider identity ownership, equivalent to `UNIQUE(provider, provider_user_id)`.
+4. A provider identity must never silently move from one canonical user to another.
+5. Email/name/display-name similarity must never auto-merge accounts.
+6. Account linking/unlinking is an Identity-domain operation and must be auditable.
+7. Telegram `initData` must be verified server-side before Telegram identity resolution.
+8. Once linked, Web and Telegram resolve to the same canonical `users.id`.
+
+### Shared game identity
+
+A human game seat references the canonical user:
+
+```text
+game_players
+  id
+  game_id
+  user_id -> users.id
+  seat_index
+  display_name_snapshot
+  player_kind
+```
+
+`game_players.id` is a seat/player identity inside one game. It is not a replacement for `users.id`.
+
+If the same user changes frontend during an active game:
+
+```text
+Web -> close
+Telegram -> authenticate -> same users.id
+                         -> same room membership
+                         -> same active game
+                         -> same game_player seat
+                         -> same private hand
+                         -> same revision/effects
+```
+
+The platform switch must not create a duplicate player.
+
+### Shared command path
+
+Both clients submit the same contracts:
+
+```text
+Web action --------\
+                    -> packages/api-client -> API command service -> game-engine -> PostgreSQL transaction
+Telegram action ---/
+```
+
+Examples include the same canonical command families for draw, play, target selection, color choice, prompt answer, Pass, Nope, Rewind, voting, and later approved actions.
+
+Do not create independent implementations such as:
+
+```text
+webDrawCard()
+telegramDrawCard()
+```
+
+when they own game semantics.
+
+Platform-specific code may translate presentation events into the shared command contract, but rule resolution stays server-side.
+
+### Platform metadata is non-semantic
+
+It is acceptable to record metadata such as:
+
+```text
+source_client = web | telegram
+```
+
+for observability, analytics, or troubleshooting.
+
+It must never change game semantics, permissions, prompt eligibility, deck behavior, timers, scoring, winner rules, or effect resolution.
+
+### Shared prompts, libraries, media, and saved data
+
+Content created from either client belongs to the same canonical domain:
+
+```text
+Web-created prompt --------\
+                            -> same prompts / libraries / prompt_media / owner users.id
+Telegram-created prompt ---/
+```
+
+There is no separate Web prompt library, Telegram prompt library, Web history, or Telegram history.
+
+### Cross-client acceptance requirement
+
+Production acceptance must prove:
+
+- one Web user and one Telegram user can join the same room and same game;
+- both observe the same canonical revision after each accepted command;
+- private projections preserve the correct hand for each user;
+- the same linked human account can authenticate through Web and Telegram and recover the same profile, rooms, saved prompts/library, history, and active game;
+- switching clients does not create a duplicate room member or game player;
+- both clients use `packages/api-client` and the same backend command contracts.
+
+## 2.3 Forbidden authority duplication
 
 Do not create or reactivate:
 
@@ -220,13 +401,13 @@ Do not create or reactivate:
 - a second simulation engine;
 - hidden compatibility modes that mutate canonical game state differently.
 
-## 2.3 Modular monolith, not microservices
+## 2.4 Modular monolith, not microservices
 
 Target architecture is one deployable API application with strong internal module boundaries.
 
 Do not introduce Redis, Kafka, event-sourcing infrastructure, extra databases, or service decomposition merely for theoretical scalability. Add infrastructure only when a measured requirement justifies it.
 
-## 2.4 Toolchain
+## 2.5 Toolchain
 
 Required baseline:
 
@@ -250,7 +431,7 @@ npm run build:telegram
 npm run build:api
 ```
 
-## 2.5 Temporary files
+## 2.6 Temporary files
 
 Do not commit:
 
@@ -494,10 +675,20 @@ Railway API is deployed from the earlier P7A branch baseline rather than the lat
 
 Owns:
 
-- canonical user ID;
-- provider identities (Telegram, guest, future providers);
+- canonical `users.id`;
+- provider identities (Telegram, Web auth/password, guest where retained, future providers);
+- secure account-linking/unlinking between multiple provider identities and one canonical user;
 - authentication sessions/tokens;
-- display identity metadata.
+- display identity metadata;
+- audit evidence for identity linking where required.
+
+Identity rules:
+
+- provider identities map through `user_identities` to canonical `users.id`;
+- `UNIQUE(provider, provider_user_id)` or an equivalent constraint prevents one provider identity from belonging to multiple users;
+- Web and Telegram authentication may resolve to the same canonical user;
+- no room/game/content table may use platform identity as its ownership authority;
+- no account auto-merge from matching display name/email-like metadata without proof of identity ownership.
 
 Does not own:
 
@@ -716,6 +907,8 @@ Names may be finalized during `DB-001`, but the ownership model must remain equi
 - `provider_username nullable`
 - `provider_payload jsonb`
 - unique `(provider, provider_user_id)`
+
+One canonical user may have multiple rows here, including Web and Telegram identities. Product ownership elsewhere references `users.id`, never a provider-specific identifier.
 
 ### `auth_sessions`
 
@@ -1995,13 +2188,35 @@ Must prove:
 
 Wire:
 
-- guest auth;
-- Telegram auth;
+- Web authentication identity;
+- Telegram authentication identity;
+- guest auth only if intentionally retained;
+- canonical `users.id` resolution;
 - auth session lookup;
 - user projection;
 - logout/revocation basics.
 
 Remove ad hoc random gameplay credential authority after canonical path is proven.
+
+### `LIFE-001A` - Cross-client account linking and identity continuity
+
+**Status:** `NOT STARTED`
+
+Implement:
+
+- secure linking of an additional Web/Telegram provider identity to an already authenticated canonical user;
+- proof of control over both sides of the link;
+- unique provider-identity ownership;
+- no display-name/email heuristic auto-merge;
+- auditable link/unlink lifecycle;
+- same canonical profile/rooms/library/history/active-game lookup from either linked frontend;
+- duplicate-user collision handling that fails closed rather than silently moving an identity.
+
+Acceptance:
+
+- one person proves Web and Telegram identities and both resolve to the same `users.id`;
+- switching frontend does not duplicate `room_members` or `game_players`;
+- unlinking one provider does not delete the canonical user's shared product data.
 
 ### `LIFE-002` - Room domain
 
@@ -2556,7 +2771,30 @@ Equivalent hosted Mini App proof.
 
 **Status:** `NOT STARTED`
 
-One player Web + one player Telegram in same room/game, synchronized canonical state.
+Prove one player on Web + one player on Telegram can share the same room and game through the same API/engine/database authority.
+
+Required evidence:
+
+- same room membership model;
+- same game session/revision;
+- correct player-specific private hands;
+- accepted command from either frontend becomes visible to the other through the same canonical revision;
+- no client-specific game-rule path.
+
+### `ACC-004A` - Same-person cross-client identity continuity
+
+**Status:** `NOT STARTED`
+
+Using one securely linked canonical account, prove:
+
+- Web login and Telegram login resolve to the same `users.id`;
+- same profile;
+- same room memberships;
+- same saved prompts/library;
+- same history;
+- same active game;
+- same human game-player seat/private hand when moving between clients;
+- no duplicate Web user/Telegram user is created.
 
 ### `ACC-005` - Production release candidate
 
@@ -2681,6 +2919,7 @@ Agents append concise evidence rows. Do not turn this into a chat transcript.
 | 2026-09-20 | MEDIA-000 | PASS | Audio/media architecture incorporated into the living roadmap | Planning only. No audio source, DB, object-storage, worker, deploy, merge, or gameplay mutation; BASE-001 remains NEXT TASK. |
 | 2026-09-20 | REPO-000 | PASS | Branch-governance registry and post-BASE-001 cleanup roadmap added | Planning only. No branch deletion, PR closure, merge, branch movement, deployment, or source mutation; BASE-001 remains NEXT TASK. |
 | 2026-09-20 | SIM-000 | IN PROGRESS | Source repair commits `3b2c2a5f` -> `47cc745a` -> `8b58c457` | Owner confirmed **Start simulated game** is safe to extract. Source paths are separated; exact-state CI + hosted no-flicker proof still required. BASE-001 remains NEXT TASK. |
+| 2026-09-20 | ARCH-001 | PASS | Single Product / Cross-Client Identity Invariant added to HANDOFF | Owner locked Web and Telegram as presentation adapters over the same canonical user/identity/room/game/prompt/permissions/API/engine/PostgreSQL authority. No source, DB, deployment, branch, or NEXT TASK change. |
 
 ---
 
@@ -2732,6 +2971,10 @@ Agents must not:
 - replace the extracted old UI with a new design;
 - import the old runtime wholesale;
 - restore multiple game authorities;
+- create separate Web and Telegram user/account domains for the same product;
+- create separate Web and Telegram room, game, prompt-library, history, permissions, or command authorities;
+- let frontend platform identity replace canonical `users.id` as durable product ownership;
+- auto-merge canonical accounts based only on matching names/emails without proof of identity ownership;
 - add a second database schema instead of replacing/consolidating the old one;
 - perform production resets because the app is fresh without explicit task authorization;
 - treat stale CI as proof for a new SHA;
@@ -2753,6 +2996,11 @@ The project can be called complete only when all boxes are genuinely supported b
 - [ ] Superseded PRs/branches are classified and safely retired or preserved
 - [ ] New work uses task/<TASK-ID>-<slug> branch naming
 - [ ] Canonical identity/auth in production
+- [ ] Web + Telegram provider identities can securely map to the same canonical users.id
+- [ ] Same-person Web/Telegram account linking and unlinking is proven without heuristic auto-merge
+- [ ] Room/game/content ownership references canonical users.id rather than platform identity
+- [ ] Web and Telegram share one room/game/prompt/library/history/permissions authority
+- [ ] Switching a linked active player between Web and Telegram preserves the same game seat and private hand
 - [ ] Canonical Room lifecycle
 - [ ] Canonical Room -> Game start boundary
 - [ ] One clean PostgreSQL schema/migration chain
