@@ -1,97 +1,61 @@
-create table if not exists clean_game_sessions (
-  id uuid primary key default gen_random_uuid(),
-  join_code text not null unique,
-  status text not null check (status in ('LOBBY', 'ACTIVE', 'COMPLETED', 'ABANDONED')),
-  host_user_id uuid not null references app_users(id),
-  current_turn_participant_id uuid,
-  revision bigint not null default 0 check (revision >= 0),
-  created_at timestamptz not null default now(),
-  updated_at timestamptz not null default now()
-);
-
-create table if not exists game_participants (
-  id uuid primary key default gen_random_uuid(),
-  session_id uuid not null references clean_game_sessions(id) on delete cascade,
-  user_id uuid not null references app_users(id),
-  display_name text not null,
-  seat_index integer not null,
-  role text not null default 'player' check (role in ('host', 'player', 'spectator')),
-  joined_at timestamptz not null default now(),
-  unique (session_id, user_id),
-  unique (session_id, seat_index)
-);
-
-do $$ begin
-  alter table clean_game_sessions
-    add constraint clean_game_sessions_current_turn_participant_fk
-    foreign key (current_turn_participant_id)
-    references game_participants(id);
-exception
-  when duplicate_object then null;
-end $$;
-
-create table if not exists game_states (
-  session_id uuid primary key references clean_game_sessions(id) on delete cascade,
+create table if not exists game_sessions (
+  session_id text primary key,
   canonical_state jsonb not null,
   revision bigint not null check (revision >= 0),
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
 
-create index if not exists game_states_revision_idx
-  on game_states(session_id, revision);
+create table if not exists game_session_memberships (
+  session_id text not null references game_sessions(session_id) on delete cascade,
+  principal_id text not null references users(id) on delete cascade,
+  player_id text not null,
+  joined_at timestamptz not null default now(),
+  primary key (session_id, principal_id),
+  unique (session_id, player_id)
+);
 
-create table if not exists clean_game_commands (
-  id uuid primary key default gen_random_uuid(),
-  session_id uuid not null references clean_game_sessions(id) on delete cascade,
-  actor_participant_id uuid references game_participants(id),
+create table if not exists accepted_command_receipts (
+  session_id text not null references game_sessions(session_id) on delete cascade,
   command_id text not null,
-  command_type text not null,
-  expected_revision bigint,
-  payload jsonb not null default '{}'::jsonb,
-  result_status text not null check (result_status in ('ACCEPTED', 'REJECTED')),
-  result_payload jsonb not null default '{}'::jsonb,
-  before_revision bigint not null,
-  after_revision bigint,
+  command_fingerprint text not null,
+  actor_player_id text not null,
+  accepted_revision bigint not null check (accepted_revision >= 0),
   created_at timestamptz not null default now(),
-  unique (session_id, command_id)
+  primary key (session_id, command_id)
 );
 
-create index if not exists clean_game_commands_session_created_idx
-  on clean_game_commands(session_id, created_at);
-
-create table if not exists clean_game_outbox (
-  id bigserial primary key,
-  session_id uuid not null references clean_game_sessions(id) on delete cascade,
-  revision bigint not null check (revision >= 0),
-  audience jsonb not null default '{"kind":"session"}'::jsonb,
-  event_type text not null,
-  payload jsonb not null default '{}'::jsonb,
+create table if not exists game_outbox (
+  outbox_id bigserial primary key,
+  session_id text not null references game_sessions(session_id) on delete cascade,
+  accepted_revision bigint not null check (accepted_revision >= 0),
+  audience jsonb not null,
+  payload jsonb not null,
   created_at timestamptz not null default now(),
-  published_at timestamptz,
-  lease_token text,
-  lease_expires_at timestamptz
+  published_at timestamptz null,
+  lease_token text null,
+  lease_expires_at timestamptz null
 );
 
-create index if not exists clean_game_outbox_unpublished_idx
-  on clean_game_outbox(id)
+create index if not exists game_outbox_unpublished_idx
+  on game_outbox (outbox_id)
   where published_at is null;
 
-create index if not exists clean_game_outbox_session_revision_idx
-  on clean_game_outbox(session_id, revision);
-
-create table if not exists clean_game_deadline_jobs (
-  id uuid primary key default gen_random_uuid(),
-  session_id uuid not null references clean_game_sessions(id) on delete cascade,
+create table if not exists game_deadline_jobs (
+  deadline_id text primary key,
+  session_id text not null references game_sessions(session_id) on delete cascade,
   due_at timestamptz not null,
-  status text not null check (status in ('pending', 'leased', 'completed', 'cancelled')),
+  principal_id text not null references users(id) on delete cascade,
+  command_id text not null,
+  command_fingerprint text not null,
+  expected_revision bigint not null check (expected_revision >= 0),
   command_payload jsonb not null,
-  lease_token text,
-  lease_expires_at timestamptz,
-  completed_at timestamptz,
-  created_at timestamptz not null default now()
+  status text not null check (status in ('pending', 'leased', 'completed')),
+  lease_token text null,
+  lease_expires_at timestamptz null,
+  completed_at timestamptz null
 );
 
-create index if not exists clean_game_deadline_jobs_due_idx
-  on clean_game_deadline_jobs(due_at, id)
-  where status in ('pending', 'leased');
+create index if not exists game_deadline_jobs_due_idx
+  on game_deadline_jobs (due_at, deadline_id)
+  where status <> 'completed';

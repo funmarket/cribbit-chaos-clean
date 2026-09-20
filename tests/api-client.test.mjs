@@ -41,3 +41,24 @@ test('client-app maps known room join rejection codes to product-facing copy', a
   assert.match(clientSource, /PLAYER_ALREADY_JOINED'\) return 'This player is already in the room\.'/);
   assert.doesNotMatch(clientSource, /return error\.message;\s*\n\s*}\s*\n\s*if \(error instanceof CribbitApiError/);
 });
+
+
+test('API client sends platform authentication through one shared transport and no game credential header', async () => {
+  const requests = [];
+  const client = createCribbitApiClient({
+    baseUrl: 'https://example.test/api',
+    getAuthHeaders: () => ({ authorization: 'tma signed-init-data' }),
+    fetchImpl: async (input, init) => {
+      requests.push({ input: String(input), init });
+      return new Response(JSON.stringify({
+        player: { sessionId: 'room1', playerId: 'p1', displayName: 'Ada' },
+        projection: { source: 'server', sessionId: 'room1', roomName: 'Room', modeLabel: 'Party', round: 0, revision: 0, status: 'waiting', connection: 'connected', players: [], currentPlayer: { playerId: 'p1', hand: [] }, drawPileCount: 0, discardCard: null, activeColor: null, direction: 'clockwise', currentTurnPlayerId: null, activeEffect: null, turnLabel: 'Waiting', winner: null, canStartGame: false, availableActions: { canDraw: false, playableCardIds: [] } }
+      }), { status: 201, headers: { 'content-type': 'application/json' } });
+    }
+  });
+  await client.createSession({ displayName: 'Ada' });
+  const headers = new Headers(requests[0].init.headers);
+  assert.equal(headers.get('authorization'), 'tma signed-init-data');
+  assert.equal(headers.has('x-cribbit-credential'), false);
+  assert.equal(requests[0].init.credentials, 'include');
+});

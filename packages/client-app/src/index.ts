@@ -1,5 +1,5 @@
 import { CribbitApiError, createCribbitApiClient } from '@cribbit/api-client';
-import type { GameViewProjection, PlayerSessionCredential } from '@cribbit/contracts';
+import type { GameViewProjection, PlayerSessionIdentity } from '@cribbit/contracts';
 import type { PlatformAdapter } from '@cribbit/platform/types';
 import { createTelegramPresentationDraft, ensureCribbitStyles, mountGameTable, mountTelegramPresentationController, mountTelegramTopMenuController, mountWebPresentationController, renderCribbitHome, renderCribbitLobby, type MountedGameTable, type WebProductView } from '@cribbit/ui';
 import { createFixturePreview } from './fixture-preview.ts';
@@ -7,7 +7,7 @@ import { createFixturePreview } from './fixture-preview.ts';
 const mounted = new WeakSet<HTMLElement>();
 
 interface AppState {
-  readonly credential: PlayerSessionCredential | null;
+  readonly player: PlayerSessionIdentity | null;
   readonly projection: GameViewProjection | null;
   readonly busy: boolean;
   readonly error: string | null;
@@ -45,8 +45,8 @@ export function bootstrap(root: HTMLElement, platform: PlatformAdapter, options:
   mounted.add(root);
   root.dataset.accessSurface = platform.kind;
 
-  const api = createCribbitApiClient({ baseUrl: normalizeApiBaseUrl(options.apiBaseUrl) });
-  let state: AppState = { credential: null, projection: null, busy: false, error: null };
+  const api = createCribbitApiClient({ baseUrl: normalizeApiBaseUrl(options.apiBaseUrl), getAuthHeaders: platform.getAuthHeaders });
+  let state: AppState = { player: null, projection: null, busy: false, error: null };
   let table: MountedGameTable | null = null;
   let unmountWebPresentation: (() => void) | null = null;
   let unmountTelegramPresentation: (() => void) | null = null;
@@ -66,9 +66,9 @@ export function bootstrap(root: HTMLElement, platform: PlatformAdapter, options:
   };
 
   const refreshProjection = async (): Promise<void> => {
-    if (!state.credential) return;
+    if (!state.player) return;
     try {
-      const projection = await api.getProjection(state.credential);
+      const projection = await api.getProjection(state.player.sessionId);
       if (state.projection?.revision === projection.revision && state.error === null) return;
       setState({ projection, error: null });
     } catch (error) {
@@ -77,7 +77,7 @@ export function bootstrap(root: HTMLElement, platform: PlatformAdapter, options:
   };
 
   const ensurePolling = (): void => {
-    if (pollHandle !== null || !state.credential) return;
+    if (pollHandle !== null || !state.player) return;
     pollHandle = window.setInterval(() => { void refreshProjection(); }, 1500);
   };
 
@@ -91,8 +91,8 @@ export function bootstrap(root: HTMLElement, platform: PlatformAdapter, options:
   const createSession = (displayName: string): void => {
     simulationProjection = null;
     void withBusy(async () => {
-      const result = await api.createSession({ displayName });
-      state = { credential: result.credential, projection: result.projection, busy: false, error: null };
+      if (platform.kind === 'telegram') await api.ensureTelegramAccount();\n      else await api.ensureWebGuest({ displayName });\n      const result = await api.createSession({ displayName });
+      state = { player: result.player, projection: result.projection, busy: false, error: null };
       ensurePolling();
       render();
     });
@@ -101,8 +101,8 @@ export function bootstrap(root: HTMLElement, platform: PlatformAdapter, options:
   const joinSession = (sessionId: string, displayName: string): void => {
     simulationProjection = null;
     void withBusy(async () => {
-      const result = await api.joinSession({ sessionId, displayName });
-      state = { credential: result.credential, projection: result.projection, busy: false, error: null };
+      if (platform.kind === 'telegram') await api.ensureTelegramAccount();\n      else await api.ensureWebGuest({ displayName });\n      const result = await api.joinSession({ sessionId, displayName });
+      state = { player: result.player, projection: result.projection, busy: false, error: null };
       ensurePolling();
       render();
     });
@@ -117,31 +117,31 @@ export function bootstrap(root: HTMLElement, platform: PlatformAdapter, options:
   const returnToTelegramRoomSetup = (): void => {
     simulationProjection = null;
     stopPolling();
-    state = { credential: null, projection: null, busy: false, error: null };
+    state = { player: null, projection: null, busy: false, error: null };
     render();
   };
 
   const startGame = (): void => {
-    if (!state.credential) return;
+    if (!state.player) return;
     void withBusy(async () => {
-      const projection = await api.startGame(state.credential as PlayerSessionCredential);
+      const projection = await api.startGame(state.player.sessionId);
       setState({ projection });
     });
   };
 
   const drawCard = (): void => {
-    if (!state.credential || !state.projection) return;
+    if (!state.player || !state.projection) return;
     void withBusy(async () => {
-      const result = await api.drawCard(state.credential as PlayerSessionCredential, state.projection?.revision ?? 0);
+      const result = await api.drawCard(state.player.sessionId, state.projection?.revision ?? 0);
       if (!result.ok) throw new Error(result.reason ?? result.code);
       setState({ projection: result.projection });
     });
   };
 
   const playCard = (cardInstanceId: string): void => {
-    if (!state.credential || !state.projection) return;
+    if (!state.player || !state.projection) return;
     void withBusy(async () => {
-      const result = await api.playCard(state.credential as PlayerSessionCredential, state.projection?.revision ?? 0, cardInstanceId);
+      const result = await api.playCard(state.player.sessionId, state.projection?.revision ?? 0, cardInstanceId);
       if (!result.ok) throw new Error(result.reason ?? result.code);
       setState({ projection: result.projection });
     });
@@ -211,7 +211,7 @@ export function bootstrap(root: HTMLElement, platform: PlatformAdapter, options:
       }
       return;
     }
-    if (!state.projection || !state.credential) {
+    if (!state.projection || !state.player) {
       root.innerHTML = renderCribbitHome({ busy: state.busy, error: state.error, surface: platform.kind });
       bindHome();
       if (platform.kind === 'web') {

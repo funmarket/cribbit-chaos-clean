@@ -1,15 +1,17 @@
 import type { GameCommandPayload } from './commands.ts';
 import type { GameViewProjection } from './view.ts';
 
-export interface PlayerSessionCredential {
+export interface PlayerSessionIdentity {
   readonly sessionId: string;
   readonly playerId: string;
   readonly displayName: string;
-  readonly credential: string;
 }
 
+/** @deprecated The clean runtime no longer carries a per-game secret credential. */
+export type PlayerSessionCredential = PlayerSessionIdentity;
+
 export interface SessionProjectionResponse {
-  readonly credential: PlayerSessionCredential;
+  readonly player: PlayerSessionIdentity;
   readonly projection: GameViewProjection;
 }
 

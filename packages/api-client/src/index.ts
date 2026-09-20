@@ -1,16 +1,22 @@
 import type {
+  AuthContextView,
+  AuthenticatedUser,
   DrawCardCommandPayload,
   ExecuteGameCommandResponse,
   GameViewProjection,
   JoinSessionRequest,
-  PlayerSessionCredential,
   PlayCardCommandPayload,
-  SessionProjectionResponse
+  SessionProjectionResponse,
+  TelegramLinkCodeResponse,
+  WebLoginRequest,
+  WebRegisterRequest
 } from '@cribbit/contracts';
 
 export interface CribbitApiClientOptions {
   readonly baseUrl?: string;
   readonly fetchImpl?: typeof fetch;
+  readonly credentials?: RequestCredentials;
+  readonly getAuthHeaders?: () => HeadersInit;
 }
 
 export class CribbitApiError extends Error {
@@ -28,12 +34,20 @@ export class CribbitApiError extends Error {
 }
 
 export interface CribbitApiClient {
+  getCurrentUser(): Promise<AuthContextView | null>;
+  ensureWebGuest(input: { readonly displayName: string }): Promise<AuthenticatedUser>;
+  registerWebAccount(input: WebRegisterRequest): Promise<AuthenticatedUser>;
+  loginWebAccount(input: WebLoginRequest): Promise<AuthenticatedUser>;
+  ensureTelegramAccount(): Promise<AuthenticatedUser>;
+  createTelegramLinkCode(): Promise<TelegramLinkCodeResponse>;
+  claimTelegramLink(code: string): Promise<{ readonly ok: true; readonly user: AuthenticatedUser }>;
+  logout(): Promise<{ readonly ok: true }>;
   createSession(input: { readonly displayName: string }): Promise<SessionProjectionResponse>;
   joinSession(input: { readonly sessionId: string; readonly displayName: string }): Promise<SessionProjectionResponse>;
-  getProjection(credential: PlayerSessionCredential): Promise<GameViewProjection>;
-  startGame(credential: PlayerSessionCredential): Promise<GameViewProjection>;
-  drawCard(credential: PlayerSessionCredential, expectedRevision: number, commandId?: string): Promise<ExecuteGameCommandResponse>;
-  playCard(credential: PlayerSessionCredential, expectedRevision: number, cardInstanceId: string, commandId?: string): Promise<ExecuteGameCommandResponse>;
+  getProjection(sessionId: string): Promise<GameViewProjection>;
+  startGame(sessionId: string): Promise<GameViewProjection>;
+  drawCard(sessionId: string, expectedRevision: number, commandId?: string): Promise<ExecuteGameCommandResponse>;
+  playCard(sessionId: string, expectedRevision: number, cardInstanceId: string, commandId?: string): Promise<ExecuteGameCommandResponse>;
 }
 
 function joinUrl(baseUrl: string, path: string): string {
@@ -54,62 +68,97 @@ async function decodeJson<T>(response: Response): Promise<T> {
 export function createCribbitApiClient(options: CribbitApiClientOptions = {}): CribbitApiClient {
   const baseUrl = options.baseUrl ?? '/api';
   const fetchImpl = options.fetchImpl ?? fetch;
-  const jsonHeaders = { 'content-type': 'application/json' } as const;
-  const authHeaders = (credential: PlayerSessionCredential) => ({ 'x-cribbit-credential': credential.credential });
+  const credentials = options.credentials ?? 'include';
+  const dynamicHeaders = () => options.getAuthHeaders?.() ?? {};
 
-  async function command(credential: PlayerSessionCredential, body: { readonly commandId?: string; readonly expectedRevision: number; readonly command: DrawCardCommandPayload | PlayCardCommandPayload }): Promise<ExecuteGameCommandResponse> {
-    const response = await fetchImpl(joinUrl(baseUrl, `/sessions/${encodeURIComponent(credential.sessionId)}/commands`), {
+  const request = async <T>(path: string, init: RequestInit = {}): Promise<T> => {
+    const headers = new Headers(dynamicHeaders());
+    new Headers(init.headers).forEach((value, key) => headers.set(key, value));
+    const response = await fetchImpl(joinUrl(baseUrl, path), { ...init, credentials, headers });
+    return decodeJson<T>(response);
+  };
+
+  async function command(sessionId: string, body: { readonly commandId?: string; readonly expectedRevision: number; readonly command: DrawCardCommandPayload | PlayCardCommandPayload }): Promise<ExecuteGameCommandResponse> {
+    return request<ExecuteGameCommandResponse>(`/sessions/${encodeURIComponent(sessionId)}/commands`, {
       method: 'POST',
-      headers: { ...jsonHeaders, ...authHeaders(credential) },
+      headers: { 'content-type': 'application/json' },
       body: JSON.stringify(body)
     });
-    return decodeJson<ExecuteGameCommandResponse>(response);
   }
 
   return {
+    getCurrentUser: () => request<AuthContextView | null>('/auth/me'),
+    ensureWebGuest: (input) => request<{ readonly user: AuthenticatedUser }>('/auth/web/guest', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify(input)
+    }).then((payload) => payload.user),
+    registerWebAccount: (input) => request<{ readonly user: AuthenticatedUser }>('/auth/web/register', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify(input)
+    }).then((payload) => payload.user),
+    loginWebAccount: (input) => request<{ readonly user: AuthenticatedUser }>('/auth/web/login', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify(input)
+    }).then((payload) => payload.user),
+    ensureTelegramAccount: () => request<{ readonly user: AuthenticatedUser }>('/auth/telegram/account', {
+      method: 'POST'
+    }).then((payload) => payload.user),
+    createTelegramLinkCode: () => request<TelegramLinkCodeResponse>('/auth/telegram-link/code', {
+      method: 'POST'
+    }),
+    claimTelegramLink: (code) => request<{ readonly ok: true; readonly user: AuthenticatedUser }>('/auth/telegram-link/claim', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ code })
+    }),
+    logout: () => request<{ readonly ok: true }>('/auth/logout', { method: 'POST' }),
+
     async createSession(input) {
-      const response = await fetchImpl(joinUrl(baseUrl, '/sessions'), {
+      return request<SessionProjectionResponse>('/sessions', {
         method: 'POST',
-        headers: jsonHeaders,
+        headers: { 'content-type': 'application/json' },
         body: JSON.stringify({ displayName: input.displayName })
       });
-      return decodeJson<SessionProjectionResponse>(response);
     },
 
     async joinSession(input) {
-      const request: JoinSessionRequest = { displayName: input.displayName };
-      const response = await fetchImpl(joinUrl(baseUrl, `/sessions/${encodeURIComponent(input.sessionId)}/join`), {
+      const body: JoinSessionRequest = { displayName: input.displayName };
+      return request<SessionProjectionResponse>(`/sessions/${encodeURIComponent(input.sessionId)}/join`, {
         method: 'POST',
-        headers: jsonHeaders,
-        body: JSON.stringify(request)
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify(body)
       });
-      return decodeJson<SessionProjectionResponse>(response);
     },
 
-    async getProjection(credential) {
-      const response = await fetchImpl(joinUrl(baseUrl, `/sessions/${encodeURIComponent(credential.sessionId)}/projection`), {
-        method: 'GET',
-        headers: authHeaders(credential)
-      });
-      const payload = await decodeJson<{ readonly projection: GameViewProjection }>(response);
+    async getProjection(sessionId) {
+      const payload = await request<{ readonly projection: GameViewProjection }>(`/sessions/${encodeURIComponent(sessionId)}/projection`);
       return payload.projection;
     },
 
-    async startGame(credential) {
-      const response = await fetchImpl(joinUrl(baseUrl, `/sessions/${encodeURIComponent(credential.sessionId)}/start`), {
-        method: 'POST',
-        headers: authHeaders(credential)
+    async startGame(sessionId) {
+      const payload = await request<{ readonly projection: GameViewProjection }>(`/sessions/${encodeURIComponent(sessionId)}/start`, {
+        method: 'POST'
       });
-      const payload = await decodeJson<{ readonly projection: GameViewProjection }>(response);
       return payload.projection;
     },
 
-    drawCard(credential, expectedRevision, commandId) {
-      return command(credential, { commandId, expectedRevision, command: { kind: 'DRAW_CARD' } });
+    drawCard(sessionId, expectedRevision, commandId) {
+      return command(sessionId, {
+        ...(commandId ? { commandId } : {}),
+        expectedRevision,
+        command: { kind: 'DRAW_CARD' }
+      });
     },
 
-    playCard(credential, expectedRevision, cardInstanceId, commandId) {
-      return command(credential, { commandId, expectedRevision, command: { kind: 'PLAY_CARD', cardInstanceId } });
+    playCard(sessionId, expectedRevision, cardInstanceId, commandId) {
+      return command(sessionId, {
+        ...(commandId ? { commandId } : {}),
+        expectedRevision,
+        command: { kind: 'PLAY_CARD', cardInstanceId }
+      });
     }
   };
 }

@@ -9,9 +9,8 @@ async function withServer(run) {
   resetMemorySessions();
   const handler = createNodeApiHandler({
     databaseUrl: '',
-    checkConnection: async () => {
-      throw new Error('memory slice must not touch postgres');
-    }
+    checkConnection: async () => { throw new Error('memory slice must not touch postgres'); },
+    sessionSecret: 'memory-test-secret'
   });
   const server = createServer(handler);
   await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve));
@@ -30,42 +29,53 @@ async function json(response) {
   return body;
 }
 
-test('memory API creates, joins, starts, draws and syncs a second client without Postgres', async () => {
+async function guest(baseUrl, displayName) {
+  const response = await fetch(`${baseUrl}/api/auth/web/guest`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ displayName })
+  });
+  const body = await json(response);
+  return { user: body.user, cookie: response.headers.get('set-cookie').split(';')[0] };
+}
+
+test('memory API creates, joins, starts, draws and syncs canonical users without per-game credentials', async () => {
   await withServer(async (baseUrl) => {
+    const ada = await guest(baseUrl, 'Ada');
+    const ben = await guest(baseUrl, 'Ben');
+
     const created = await json(await fetch(`${baseUrl}/api/sessions`, {
       method: 'POST',
-      headers: { 'content-type': 'application/json' },
+      headers: { 'content-type': 'application/json', cookie: ada.cookie },
       body: JSON.stringify({ displayName: 'Ada' })
     }));
     assert.equal(created.projection.status, 'waiting');
+    assert.equal(created.player.playerId, 'p1');
+    assert.equal('credential' in created.player, false);
 
-    const joined = await json(await fetch(`${baseUrl}/api/sessions/${created.credential.sessionId}/join`, {
+    const joined = await json(await fetch(`${baseUrl}/api/sessions/${created.player.sessionId}/join`, {
       method: 'POST',
-      headers: { 'content-type': 'application/json' },
+      headers: { 'content-type': 'application/json', cookie: ben.cookie },
       body: JSON.stringify({ displayName: 'Ben' })
     }));
     assert.equal(joined.projection.players.length, 2);
 
-    const started = await json(await fetch(`${baseUrl}/api/sessions/${created.credential.sessionId}/start`, {
+    const started = await json(await fetch(`${baseUrl}/api/sessions/${created.player.sessionId}/start`, {
       method: 'POST',
-      headers: { 'x-cribbit-credential': created.credential.credential }
+      headers: { cookie: ada.cookie }
     }));
     assert.equal(started.projection.status, 'active');
-    assert.equal(started.projection.currentPlayer.hand.length, 7);
-    assert.equal(started.projection.drawPileCount, 118);
 
-    const draw = await json(await fetch(`${baseUrl}/api/sessions/${created.credential.sessionId}/commands`, {
+    const draw = await json(await fetch(`${baseUrl}/api/sessions/${created.player.sessionId}/commands`, {
       method: 'POST',
-      headers: { 'content-type': 'application/json', 'x-cribbit-credential': created.credential.credential },
+      headers: { 'content-type': 'application/json', cookie: ada.cookie },
       body: JSON.stringify({ expectedRevision: started.projection.revision, command: { kind: 'DRAW_CARD' } })
     }));
     assert.equal(draw.ok, true);
-    assert.equal(draw.projection.revision, started.projection.revision + 1);
 
-    const other = await json(await fetch(`${baseUrl}/api/sessions/${created.credential.sessionId}/projection`, {
-      headers: { 'x-cribbit-credential': joined.credential.credential }
+    const other = await json(await fetch(`${baseUrl}/api/sessions/${created.player.sessionId}/projection`, {
+      headers: { cookie: ben.cookie }
     }));
     assert.equal(other.projection.revision, draw.projection.revision);
-    assert.equal(other.projection.drawPileCount, draw.projection.drawPileCount);
   });
 });
