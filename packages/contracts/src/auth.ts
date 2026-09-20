@@ -22,6 +22,12 @@ export interface WebLoginRequest {
   readonly password: string;
 }
 
+export interface LoginMethodsView {
+  readonly web: { readonly loginUsername: string } | null;
+  readonly telegram: { readonly username: string | null } | null;
+  readonly suggestedWebLoginUsername: string | null;
+}
+
 export interface TelegramLinkCodeResponse {
   readonly code: string;
   readonly expiresAt: string;

@@ -298,6 +298,38 @@ Rules:
 7. Telegram `initData` must be verified server-side before Telegram identity resolution.
 8. Once linked, Web and Telegram resolve to the same canonical `users.id`.
 
+### Optional login-method product rule
+
+Owner decision locked 2026-09-20:
+
+- Telegram-only accounts are valid and never require a Web username/password.
+- Web-only accounts are valid and never require Telegram.
+- Linking Web and Telegram is optional.
+- Telegram authentication remains direct through server-verified Mini App `initData`.
+- Web authentication remains username + password.
+- Adding the second login method attaches it to the existing canonical `users.id`; it must not create a second product account.
+- Telegram numeric user ID is the Telegram identity authority.
+- Telegram `username` is metadata only. It may be offered as a convenient default for a future Web login username when available.
+- Matching Web and Telegram usernames never auto-link accounts and never prove identity ownership.
+- If the suggested Telegram username is already used by another Web credential, do not suggest or claim it; the Telegram user chooses another Web username.
+- Telegram username changes update provider metadata only and do not silently rename a Web login.
+- The existing Web guest bootstrap remains transitional for the playable baseline; it is not a durable login method and must not replace the final Web username/password account path when the account UI is wired.
+
+Canonical valid states:
+
+```text
+Telegram only:
+  users.id <- telegram identity
+
+Web only:
+  users.id <- web username/password
+
+Optionally linked:
+  telegram identity -> users.id <- web username/password
+```
+
+The Identity API exposes login-method state so future Settings/Profile UI can present **Add Web login** or **Connect Telegram** without inventing platform-specific user records.
+
 ### Shared game identity
 
 A human game seat references the canonical user:
@@ -2991,6 +3023,7 @@ Agents append concise evidence rows. Do not turn this into a chat transcript.
 | 2026-09-20 | SIM-000 | IN PROGRESS | Source repair commits `3b2c2a5f` -> `47cc745a` -> `8b58c457` | Owner confirmed **Start simulated game** is safe to extract. Source paths are separated; exact-state CI + hosted no-flicker proof still required. BASE-001 remains NEXT TASK. |
 | 2026-09-20 | ARCH-001 | PASS | Single Product / Cross-Client Identity Invariant added to HANDOFF | Owner locked Web and Telegram as presentation adapters over the same canonical user/identity/room/game/prompt/permissions/API/engine/PostgreSQL authority. No source, DB, deployment, branch, or NEXT TASK change. |
 | 2026-09-20 | LIFE-001 / LIFE-001A / ACC-004 / ACC-004A | IN PROGRESS | Source convergence candidate `11e7ef29be068a1a16cfc2f26e061fedb04072f0`; CI run `35531377108` PASS | Shared canonical user/auth/game principal path and automated cross-client identity/game proof implemented. No Railway DB migration, API deployment, merge, or production activation performed. `BASE-001` remains NEXT TASK. |
+| 2026-09-20 | LIFE-001B | IN PROGRESS | Optional login-method source update in current candidate | Telegram-only and Web-only accounts are first-class; linking is optional; Telegram username is suggestion metadata only; username equality never auto-links. Hosted account UI/proof remains later work. `BASE-001` remains NEXT TASK. |
 
 ---
 

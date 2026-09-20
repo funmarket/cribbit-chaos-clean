@@ -124,3 +124,96 @@ test('Web credentials and linked Telegram identity resolve to one users.id and s
     assert.equal(loggedIn.user.id, guest.user.id);
   });
 });
+
+
+test('Telegram-only and Web-only accounts stay independent until the user explicitly links them', async () => {
+  await withServer(async (baseUrl) => {
+    const telegramAuth = telegramInitData(303, 'same_name');
+    const telegramAccount = await json(await fetch(`${baseUrl}/api/auth/telegram/account`, {
+      method: 'POST',
+      headers: { authorization: `tma ${telegramAuth}` }
+    }));
+
+    const telegramMethods = await json(await fetch(`${baseUrl}/api/auth/login-methods`, {
+      headers: { authorization: `tma ${telegramAuth}` }
+    }));
+    assert.equal(telegramMethods.web, null);
+    assert.equal(telegramMethods.telegram.username, 'same_name');
+    assert.equal(telegramMethods.suggestedWebLoginUsername, 'same_name');
+
+    const telegramGame = await json(await fetch(`${baseUrl}/api/sessions`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', authorization: `tma ${telegramAuth}` },
+      body: JSON.stringify({ displayName: 'Telegram Only' })
+    }));
+    assert.equal(telegramGame.player.playerId, 'p1');
+
+    const webRegister = await fetch(`${baseUrl}/api/auth/web/register`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ loginUsername: 'same_name', password: 'correct-horse', displayName: 'Web Only' })
+    });
+    const webAccount = await json(webRegister);
+    const webCookie = webRegister.headers.get('set-cookie').split(';')[0];
+
+    assert.notEqual(webAccount.user.id, telegramAccount.user.id);
+
+    const webMethods = await json(await fetch(`${baseUrl}/api/auth/login-methods`, {
+      headers: { cookie: webCookie }
+    }));
+    assert.equal(webMethods.web.loginUsername, 'same_name');
+    assert.equal(webMethods.telegram, null);
+    assert.equal(webMethods.suggestedWebLoginUsername, null);
+
+    const webGame = await json(await fetch(`${baseUrl}/api/sessions`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', cookie: webCookie },
+      body: JSON.stringify({ displayName: 'Web Only' })
+    }));
+    assert.equal(webGame.player.playerId, 'p1');
+
+    const telegramMethodsAfterCollision = await json(await fetch(`${baseUrl}/api/auth/login-methods`, {
+      headers: { authorization: `tma ${telegramAuth}` }
+    }));
+    assert.equal(telegramMethodsAfterCollision.suggestedWebLoginUsername, null);
+    assert.equal(telegramMethodsAfterCollision.web, null);
+  });
+});
+
+test('Telegram-only account can optionally add a Web login using its suggested username without changing users.id', async () => {
+  await withServer(async (baseUrl) => {
+    const telegramAuth = telegramInitData(404, 'linked_name');
+    const telegramAccount = await json(await fetch(`${baseUrl}/api/auth/telegram/account`, {
+      method: 'POST',
+      headers: { authorization: `tma ${telegramAuth}` }
+    }));
+
+    const before = await json(await fetch(`${baseUrl}/api/auth/login-methods`, {
+      headers: { authorization: `tma ${telegramAuth}` }
+    }));
+    assert.equal(before.web, null);
+    assert.equal(before.suggestedWebLoginUsername, 'linked_name');
+
+    const attachResponse = await fetch(`${baseUrl}/api/auth/web/register`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', authorization: `tma ${telegramAuth}` },
+      body: JSON.stringify({ loginUsername: before.suggestedWebLoginUsername, password: 'correct-horse', displayName: 'Linked Name' })
+    });
+    const attached = await json(attachResponse);
+    assert.equal(attached.user.id, telegramAccount.user.id);
+
+    const after = await json(await fetch(`${baseUrl}/api/auth/login-methods`, {
+      headers: { authorization: `tma ${telegramAuth}` }
+    }));
+    assert.equal(after.web.loginUsername, 'linked_name');
+    assert.equal(after.telegram.username, 'linked_name');
+    assert.equal(after.suggestedWebLoginUsername, null);
+
+    const webLogin = await json(await fetch(`${baseUrl}/api/auth/web/login`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ loginUsername: 'linked_name', password: 'correct-horse' })
+    }));
+    assert.equal(webLogin.user.id, telegramAccount.user.id);
+  });
+});

@@ -13,6 +13,7 @@ export function createMemoryIdentityStore(): IdentityStore {
   const users = new Map<string, AuthenticatedUserRecord>();
   const telegramOwners = new Map<string, string>();
   const telegramByUser = new Map<string, string>();
+  const telegramUsernameByUser = new Map<string, string | null>();
   const webCredentials = new Map<string, WebCredentialRecord>();
   const webByUser = new Map<string, string>();
   const sessions = new Map<string, string>();
@@ -47,15 +48,28 @@ export function createMemoryIdentityStore(): IdentityStore {
     async findWebCredential(loginUsername) {
       return webCredentials.get(loginUsername) ?? null;
     },
+    async findLoginMethods(userId) {
+      if (!users.has(userId)) return null;
+      const loginUsername = webByUser.get(userId);
+      const telegramId = telegramByUser.get(userId);
+      return {
+        web: loginUsername ? { loginUsername } : null,
+        telegram: telegramId ? { username: telegramUsernameByUser.get(userId) ?? null } : null
+      };
+    },
     async findTelegramUserId(telegramId) {
       return telegramOwners.get(telegramId) ?? null;
     },
     async createTelegramUser(input: TelegramIdentityInput) {
       const existing = telegramOwners.get(input.telegramId);
-      if (existing) return users.get(existing) ?? createUser(input.displayName);
+      if (existing) {
+        telegramUsernameByUser.set(existing, input.username ?? null);
+        return users.get(existing) ?? createUser(input.displayName);
+      }
       const user = createUser(input.displayName);
       telegramOwners.set(input.telegramId, user.id);
       telegramByUser.set(user.id, input.telegramId);
+      telegramUsernameByUser.set(user.id, input.username ?? null);
       return user;
     },
     async attachTelegramIdentity(userId, input: TelegramIdentityInput): Promise<IdentityLinkResult> {
@@ -66,6 +80,7 @@ export function createMemoryIdentityStore(): IdentityStore {
       if (!users.has(userId)) throw new Error('USER_NOT_FOUND');
       telegramOwners.set(input.telegramId, userId);
       telegramByUser.set(userId, input.telegramId);
+      telegramUsernameByUser.set(userId, input.username ?? null);
       return 'linked';
     },
     async createAuthSession(userId, _provider: AuthProvider) {

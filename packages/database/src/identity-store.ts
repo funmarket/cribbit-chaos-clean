@@ -27,11 +27,17 @@ export interface WebCredentialRecord {
   readonly passwordHash: string;
 }
 
+export interface LoginMethodsRecord {
+  readonly web: { readonly loginUsername: string } | null;
+  readonly telegram: { readonly username: string | null } | null;
+}
+
 export interface IdentityStore {
   createAnonymousUser(displayName: string): Promise<AuthenticatedUserRecord>;
   createWebUser(input: WebCredentialInput & { readonly displayName: string }): Promise<AuthenticatedUserRecord>;
   attachWebCredential(userId: string, input: WebCredentialInput): Promise<IdentityLinkResult>;
   findWebCredential(loginUsername: string): Promise<WebCredentialRecord | null>;
+  findLoginMethods(userId: string): Promise<LoginMethodsRecord | null>;
   findTelegramUserId(telegramId: string): Promise<string | null>;
   createTelegramUser(input: TelegramIdentityInput): Promise<AuthenticatedUserRecord>;
   attachTelegramIdentity(userId: string, input: TelegramIdentityInput): Promise<IdentityLinkResult>;
@@ -136,6 +142,31 @@ export function createIdentityStore(pool: pg.Pool): IdentityStore {
         [loginUsername]
       );
       return result.rowCount ? { userId: result.rows[0].user_id, passwordHash: result.rows[0].password_hash } : null;
+    },
+
+    async findLoginMethods(userId) {
+      const result = await pool.query<{
+        id: string;
+        login_username: string | null;
+        telegram_provider_user_id: string | null;
+        telegram_username: string | null;
+      }>(
+        `select u.id,
+                w.login_username,
+                t.provider_user_id as telegram_provider_user_id,
+                t.provider_username as telegram_username
+           from users u
+           left join web_credentials w on w.user_id = u.id
+           left join user_identities t on t.user_id = u.id and t.provider = 'telegram'
+          where u.id = $1`,
+        [userId]
+      );
+      if (!result.rowCount) return null;
+      const row = result.rows[0];
+      return {
+        web: row.login_username ? { loginUsername: row.login_username } : null,
+        telegram: row.telegram_provider_user_id ? { username: row.telegram_username } : null
+      };
     },
 
     async findTelegramUserId(telegramId) {

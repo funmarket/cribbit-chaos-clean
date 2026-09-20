@@ -148,6 +148,29 @@ export function createNodeApiHandler({
         return;
       }
 
+      if (request.method === 'GET' && pathname === '/api/auth/login-methods') {
+        const context = await authContext(request);
+        if (!context) {
+          sendJson(response, 401, { ok: false, code: 'AUTH_REQUIRED' });
+          return;
+        }
+        const methods = await identityStore().findLoginMethods(context.userId);
+        if (!methods) {
+          sendJson(response, 404, { ok: false, code: 'USER_NOT_FOUND' });
+          return;
+        }
+        let suggestedWebLoginUsername: string | null = null;
+        if (!methods.web && methods.telegram?.username) {
+          const candidate = methods.telegram.username.trim().toLowerCase();
+          if (/^[a-z0-9_.-]{3,48}$/.test(candidate)) {
+            const existing = await identityStore().findWebCredential(candidate);
+            if (!existing || existing.userId === context.userId) suggestedWebLoginUsername = candidate;
+          }
+        }
+        sendJson(response, 200, { ...methods, suggestedWebLoginUsername });
+        return;
+      }
+
       if (request.method === 'POST' && pathname === '/api/auth/web/guest') {
         const existing = await authContext(request);
         if (existing) { sendJson(response, 200, { user: existing.user }); return; }

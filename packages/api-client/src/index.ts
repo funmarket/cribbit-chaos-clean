@@ -5,6 +5,7 @@ import type {
   ExecuteGameCommandResponse,
   GameViewProjection,
   JoinSessionRequest,
+  LoginMethodsView,
   PlayCardCommandPayload,
   SessionProjectionResponse,
   TelegramLinkCodeResponse,
@@ -35,6 +36,7 @@ export class CribbitApiError extends Error {
 
 export interface CribbitApiClient {
   getCurrentUser(): Promise<AuthContextView | null>;
+  getLoginMethods(): Promise<LoginMethodsView>;
   ensureWebGuest(input: { readonly displayName: string }): Promise<AuthenticatedUser>;
   registerWebAccount(input: WebRegisterRequest): Promise<AuthenticatedUser>;
   loginWebAccount(input: WebLoginRequest): Promise<AuthenticatedUser>;
@@ -88,6 +90,7 @@ export function createCribbitApiClient(options: CribbitApiClientOptions = {}): C
 
   return {
     getCurrentUser: () => request<AuthContextView | null>('/auth/me'),
+    getLoginMethods: () => request<LoginMethodsView>('/auth/login-methods'),
     ensureWebGuest: (input) => request<{ readonly user: AuthenticatedUser }>('/auth/web/guest', {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
