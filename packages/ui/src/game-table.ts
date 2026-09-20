@@ -267,7 +267,7 @@ function hydrateWebTemplate(projection: GameViewProjection, state: PresentationS
   html = setInputDisabled(html, 'profileName', Boolean(input?.busy));
   html = setInputDisabled(html, 'joinCode', Boolean(input?.busy));
   html = html
-    .replace('id="startGameButton"', `id="startGameButton" data-action="${view === 'lobby' ? 'start-game' : 'create-game'}"`)
+    .replace('id="startGameButton"', 'id="startGameButton" data-action="demo-game"')
     .replace(/(<button[^>]*id="startGameButton"[^>]*)(>)/, (_match: string, prefix: string, suffix: string) => input?.busy && !prefix.includes('disabled') ? `${prefix} disabled${suffix}` : `${prefix}${suffix}`)
     .replace('<button class="button" data-action="join-room" type="button">Join room</button>', `<button class="button" data-action="join-room" type="button"${input?.busy ? ' disabled' : ''}>Join room</button>`);
 
@@ -415,9 +415,9 @@ export function renderCribbitHome(input: { readonly busy: boolean; readonly erro
 
 export function renderCribbitLobby(projection: GameViewProjection, input: { readonly busy: boolean; readonly error: string | null; readonly surface?: 'web' | 'telegram' }): string {
   if (input.surface === 'telegram') return telegramRoomCreation({ ...input, lobby: projection });
+  const liveStartButton = `<button class="button" data-action="start-game" type="button"${projection.canStartGame && !input.busy ? '' : ' disabled'}>Start Game</button>`;
   return hydrateWebTemplate(projection, createPresentationState(), 'lobby', input)
-    .replace('id="startGameButton" type="button" data-action="start-game"', `id="startGameButton" type="button" data-action="start-game"${projection.canStartGame && !input.busy ? '' : ' disabled'}`)
-    .replace('Start simulated game', 'Start Game');
+    .replace('<a class="button cc-web-create" href="#roomCreation">Create a game</a>', `<a class="button cc-web-create" href="#roomCreation">Create a game</a>${liveStartButton}`);
 }
 
 export const renderGameTable = GameTable;
