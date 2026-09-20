@@ -386,6 +386,56 @@ Production acceptance must prove:
 - switching clients does not create a duplicate room member or game player;
 - both clients use `packages/api-client` and the same backend command contracts.
 
+### Source convergence implementation - 2026-09-20
+
+Explicit owner authorization advanced the source-level Web/Telegram convergence before the later production activation gates.
+
+**Verified candidate:** `11e7ef29be068a1a16cfc2f26e061fedb04072f0`
+
+**Exact-state CI:** GitHub Actions run `35531377108` - PASS
+
+The candidate now establishes in source:
+
+- one shared client application and one `packages/api-client` transport path;
+- Web session-cookie authentication and Telegram `tma <initData>` transport authentication;
+- server-side `AuthContext` resolution to one canonical `users.id`;
+- fail-closed `AUTH_CONFLICT` when simultaneous Web/Telegram credentials resolve to different canonical users;
+- Web password identity plus explicit Web-to-Telegram account linking;
+- unique provider identity ownership with conflict rejection rather than silent reassignment;
+- game create/join/start/projection/command authorization through canonical `users.id`, not a random per-game secret;
+- `game_session_memberships.principal_id -> users.id`;
+- one canonical checked-in identity migration and one canonical game persistence migration;
+- removal of the duplicate `clean_game_sessions/game_participants/clean_game_commands` source migration generation;
+- cross-client automated proof that:
+  - a Web-created canonical user can link a Telegram identity and resolve to the same `users.id`;
+  - the linked Telegram identity recovers the same active game player seat;
+  - a different Telegram user can join the Web user's same game;
+  - both clients observe the same canonical game revision;
+  - private hand projection remains player-scoped.
+
+The exact candidate passed:
+
+- Node 24 / npm 10.9.2 gate;
+- `npm ci`;
+- typecheck;
+- architecture check;
+- full tests;
+- Web build;
+- Telegram build;
+- API build.
+
+This is **source convergence only**. It does not claim production activation.
+
+Still required before live completion:
+
+- deliberate migration/verification of the intended Railway database target;
+- deployment of this accepted API candidate to the intended environment;
+- Web and Telegram deployments configured against that same API/environment;
+- real hosted account-linking and cross-client game proof;
+- later shared profile/prompts/library/history persistence as those domains are implemented.
+
+No game-engine rule logic, extracted old UI donor source, or card artwork was changed by this convergence.
+
 ## 2.3 Forbidden authority duplication
 
 Do not create or reactivate:
@@ -2184,7 +2234,13 @@ Must prove:
 
 ### `LIFE-001` - Canonical authentication path
 
-**Status:** `NOT STARTED`
+**Status:** `IN PROGRESS`
+
+**Source evidence:** candidate `11e7ef29be068a1a16cfc2f26e061fedb04072f0`; exact-state CI run `35531377108` PASS.
+
+Implemented in source: Web guest/password session authentication, Telegram initData authentication, canonical `users.id` resolution, shared server auth context, logout/revocation basics, and removal of random per-game credentials as the active game principal.
+
+Remaining before PASS: live database migration/verification, accepted API deployment, hosted auth proof, and complete canonical user/profile projection as the product identity surface expands.
 
 Wire:
 
@@ -2200,7 +2256,13 @@ Remove ad hoc random gameplay credential authority after canonical path is prove
 
 ### `LIFE-001A` - Cross-client account linking and identity continuity
 
-**Status:** `NOT STARTED`
+**Status:** `IN PROGRESS`
+
+**Source evidence:** candidate `11e7ef29be068a1a16cfc2f26e061fedb04072f0`; `tests/cross-client-identity.test.mjs` PASS inside CI run `35531377108`.
+
+Implemented in source: explicit expiring link-code flow, verified Telegram initData claim, unique provider ownership, Web/Telegram conflict rejection, same canonical `users.id` resolution, and same active game-seat recovery across linked transports.
+
+Remaining before PASS: hosted account-linking proof, auditable unlink lifecycle, and continuity proof for profile/rooms/library/history after those persistent domains exist.
 
 Implement:
 
@@ -2769,7 +2831,11 @@ Equivalent hosted Mini App proof.
 
 ### `ACC-004` - Cross-client game
 
-**Status:** `NOT STARTED`
+**Status:** `IN PROGRESS`
+
+**Automated source/integration evidence:** candidate `11e7ef29be068a1a16cfc2f26e061fedb04072f0` proves a Web-authenticated player and a different Telegram-authenticated player can occupy the same game through the same API/engine state and observe the same revision with private-hand isolation.
+
+**Remaining:** hosted Web + Telegram proof against the same deployed API and canonical database.
 
 Prove one player on Web + one player on Telegram can share the same room and game through the same API/engine/database authority.
 
@@ -2783,7 +2849,11 @@ Required evidence:
 
 ### `ACC-004A` - Same-person cross-client identity continuity
 
-**Status:** `NOT STARTED`
+**Status:** `IN PROGRESS`
+
+**Automated source/integration evidence:** candidate `11e7ef29be068a1a16cfc2f26e061fedb04072f0` proves Web identity + linked Telegram identity resolve to the same canonical `users.id` and recover the same active game-player seat.
+
+**Remaining:** hosted proof plus same profile, room history, saved prompts/library, and history continuity after those persistent product domains are implemented.
 
 Using one securely linked canonical account, prove:
 
@@ -2920,6 +2990,7 @@ Agents append concise evidence rows. Do not turn this into a chat transcript.
 | 2026-09-20 | REPO-000 | PASS | Branch-governance registry and post-BASE-001 cleanup roadmap added | Planning only. No branch deletion, PR closure, merge, branch movement, deployment, or source mutation; BASE-001 remains NEXT TASK. |
 | 2026-09-20 | SIM-000 | IN PROGRESS | Source repair commits `3b2c2a5f` -> `47cc745a` -> `8b58c457` | Owner confirmed **Start simulated game** is safe to extract. Source paths are separated; exact-state CI + hosted no-flicker proof still required. BASE-001 remains NEXT TASK. |
 | 2026-09-20 | ARCH-001 | PASS | Single Product / Cross-Client Identity Invariant added to HANDOFF | Owner locked Web and Telegram as presentation adapters over the same canonical user/identity/room/game/prompt/permissions/API/engine/PostgreSQL authority. No source, DB, deployment, branch, or NEXT TASK change. |
+| 2026-09-20 | LIFE-001 / LIFE-001A / ACC-004 / ACC-004A | IN PROGRESS | Source convergence candidate `11e7ef29be068a1a16cfc2f26e061fedb04072f0`; CI run `35531377108` PASS | Shared canonical user/auth/game principal path and automated cross-client identity/game proof implemented. No Railway DB migration, API deployment, merge, or production activation performed. `BASE-001` remains NEXT TASK. |
 
 ---
 
@@ -2945,7 +3016,7 @@ Current known unresolved rules include items already recorded by the canonical r
 Operational blockers currently visible:
 
 - current exact-head hosted interaction proof for UI extraction;
-- dual persistence models;
+- source migration authority is now consolidated on candidate `11e7ef29be068a1a16cfc2f26e061fedb04072f0`, but the intended live Railway database has **not** been migrated or verified against that canonical schema;
 - Railway API currently references the service named staging DB while running inside the environment named production;
 - no canonical merged post-UI-extraction baseline yet;
 - full donor engine port is not present remotely;
