@@ -159,9 +159,11 @@ test('Web shell and live game keep the extracted old template structure active',
   const preview = createFixturePreview();
   const homeHtml = renderCribbitHome({ busy: false, error: null, surface: 'web' });
   assert.match(homeHtml, /<a class="button cc-web-create" href="#roomCreation">Create a game<\/a>/);
-  assert.match(homeHtml, /id="startGameButton"[^>]*>[\s\S]*Start simulated game<\/button>/);
+  assert.match(homeHtml, /id="startGameButton"[^>]*data-action="demo-game"[^>]*>[\s\S]*Start simulated game<\/button>/);
   assert.doesNotMatch(homeHtml, />Create Game<\/button>/);
   const lobbyHtml = renderCribbitLobby(preview.projection, { busy: false, error: null, surface: 'web' });
+  assert.match(lobbyHtml, /id="startGameButton"[^>]*data-action="demo-game"[^>]*>[\s\S]*Start simulated game<\/button>/);
+  assert.match(lobbyHtml, /data-action="start-game"[^>]*>Start Game<\/button>/);
   const gameHtml = renderGameTable(preview.projection, createPresentationState(), 'web');
 
   for (const marker of ['data-nav="lobby"', 'data-nav="rooms"', 'data-nav="board"', 'data-nav="library"', 'data-nav="create"', 'data-nav="call"', 'data-nav="lab"', 'id="mobileNavDialog"', 'id="cardDialog"', 'id="flowDialog"', 'id="reconnectDialog"']) {
@@ -262,7 +264,10 @@ test('Start simulated game uses the clean fixture preview instead of creating a 
 
   assert.match(clientSource, /let simulationProjection: GameViewProjection \| null = null;/);
   assert.match(clientSource, /simulationProjection = createFixturePreview\(\)\.projection;/);
-  assert.match(clientSource, /querySelector<HTMLButtonElement>\('#startGameButton'\)/);
+  assert.match(clientSource, /const bindSimulationControls = \(\): void =>/);
+  assert.match(clientSource, /querySelectorAll<HTMLButtonElement>\('\[data-action="demo-game"\]'\)/);
+  assert.doesNotMatch(clientSource, /querySelector<HTMLButtonElement>\('#startGameButton'\)\?\.addEventListener/);
+  assert.match(clientSource, /querySelector<HTMLButtonElement>\('\[data-action="start-game"\]'\)\?\.addEventListener\('click', startGame\)/);
   assert.match(clientSource, /startSimulation\(\);/);
   assert.match(clientSource, /mountGameTable\(target, simulationProjection, \{\}, platform\.kind\)/);
   assert.doesNotMatch(clientSource, /legacy-runtime|canonical-game-runtime|@cribbit\/game-engine/);
