@@ -114,6 +114,11 @@ The project is considered production-ready only when all of the following are tr
 18. Runtime smoke tests prove create -> join -> start -> play -> social effect -> continue -> winner paths.
 19. Authentication, authorization, CORS/origin policy, secrets, rate protection, logging, and operational health are production-safe.
 20. No legacy runtime, client engine, hidden fallback, duplicate reducer, or competing persistence path remains active.
+21. Audio/media is a separate presentation/content domain: game rules never depend on playback completion, codecs, microphone state, or TTS availability.
+22. Canonical prompt text remains available even when narration or a player recording exists.
+23. Prompt narration and approved voice prompt recording work on Web and Telegram with privacy-aware media projection.
+24. Audio bytes live in object storage, not PostgreSQL or canonical game-state JSON.
+25. Media retention, consent, moderation state, orphan cleanup, and expiring playback/upload authorization are production-safe.
 
 ---
 
@@ -136,6 +141,10 @@ These are permanent unless the owner explicitly supersedes them.
 | Telegram presentation | Telegram client + shared UI using server projections |
 | Timed work | canonical deadline jobs/worker |
 | Realtime publication | canonical outbox path |
+| Media metadata / authorization | Railway API + canonical PostgreSQL media tables |
+| Audio object bytes | S3-compatible object storage behind short-lived API-issued authorization |
+| Media processing | isolated media workers/adapters; never the game engine |
+| Game SFX / UI sounds | versioned client presentation assets/catalog |
 | Living execution plan | this `HANDOFF.md` |
 
 ## 2.2 Forbidden authority duplication
@@ -543,7 +552,36 @@ telegram ----> client-app, platform/telegram
 - `api-client -> game-engine`
 - `client-app -> database`
 - `web/telegram -> direct server fetch outside api-client`
+- `game-engine -> media storage/TTS/ASR/VAD provider`
+- `media workers -> game revision mutation`
+- `media playback completion -> game command/turn advancement`
 - cross-import of concrete Web and Telegram platform adapters
+
+### Media package direction
+
+Target ownership:
+
+```text
+contracts
+   ^
+   |
+   +---- media-contracts/types
+   |
+api ----> media application service ----> object-storage adapter
+   |                                  \-> media metadata repository
+   |
+workers/media-processing ----> media application contracts only
+
+ui/client-app ----> media client/playback abstractions
+web/telegram ----> platform microphone/autoplay adapters
+```
+
+Rules:
+
+- media packages contain no game-rule logic;
+- Web/Telegram never receive permanent bucket credentials;
+- clients may upload/download directly to object storage only through short-lived, purpose-bound authorization issued by the API;
+- provider-specific TTS/ASR/VAD code stays behind adapters and does not leak into game-engine types.
 
 ### Module sizing rule
 
@@ -781,7 +819,106 @@ Many-to-many membership with weighting/order metadata.
 
 If room-scoped custom content needs separate lifecycle rather than global `prompts` rows.
 
-Prompt persistence is **not** a prerequisite for the first full playable game. The engine prompt flow is a prerequisite; populated community content is not.
+### `media_assets`
+
+Metadata only. Audio bytes never live in PostgreSQL.
+
+Recommended fields:
+
+- `id uuid pk`
+- `owner_user_id nullable fk users`
+- `source` (`system`, `generated`, `user_upload`)
+- `purpose` (`prompt_narration`, `prompt_recording`, future `answer_recording`, `system_line`)
+- `storage_provider`
+- `storage_key unique`
+- `mime_type`
+- `codec nullable`
+- `duration_ms nullable`
+- `byte_size`
+- `sha256`
+- `locale nullable`
+- `status` (`pending_upload`, `uploaded`, `processing`, `ready`, `rejected`, `tombstoned`)
+- `moderation_status` (`not_required`, `pending`, `approved_room`, `approved_library`, `blocked`)
+- `retention_class` (`system_permanent`, `regeneratable`, `library_content`, `session_temporary`, future `sensitive_temporary`)
+- `expires_at nullable`
+- `created_at`
+- `ready_at nullable`
+- `deleted_at nullable`
+
+### `prompt_media`
+
+A prompt may have multiple readings/recordings without changing prompt authority.
+
+Recommended fields:
+
+- `prompt_id fk prompts on delete cascade`
+- `media_asset_id fk media_assets`
+- `role` (`canonical_narration`, `alternate_narration`, `player_recording`)
+- `locale`
+- `voice_key nullable`
+- `model_id nullable`
+- `generation_version nullable`
+- `text_hash nullable`
+- `is_default`
+- `created_at`
+- unique relationship constraints appropriate to default role/locale
+
+### `media_upload_intents`
+
+Pre-authorizes a bounded user upload and makes orphan cleanup deterministic.
+
+Recommended fields:
+
+- `id uuid pk`
+- `user_id fk users`
+- `room_id nullable fk rooms`
+- `purpose`
+- `storage_key unique`
+- `max_bytes`
+- allowed MIME/content-type policy
+- `expires_at`
+- `consumed_at nullable`
+- `created_at`
+
+The API chooses storage keys and issues a short-lived signed upload authorization. The client never receives bucket credentials.
+
+### `media_transcriptions`
+
+Machine transcription is evidence, not automatically canonical prompt text.
+
+Recommended fields:
+
+- `id uuid pk`
+- `media_asset_id fk media_assets`
+- `text`
+- `source` (`asr`, `user`, `moderator`)
+- `model nullable`
+- `model_version nullable`
+- `confidence nullable`
+- `created_at`
+
+A playable recorded prompt still requires canonical `prompts.text`. ASR output must be confirmed/corrected before becoming canonical content.
+
+### Audio preference versus room policy
+
+Do not mix device/user playback preferences with room content policy.
+
+Personal/device preference may include:
+
+- SFX enabled/volume;
+- music enabled/volume;
+- narration enabled/volume;
+- auto-read prompts;
+- preferred locale/voice.
+
+Room media policy may include:
+
+- whether player prompt recordings are allowed;
+- whether in-game manual voice prompts are allowed;
+- whether stored answer recording is allowed if that feature is ever approved;
+- retention class/window for room-generated media.
+
+Prompt persistence is **not** a prerequisite for the first full playable game. The engine prompt flow is a prerequisite; populated community content and media generation are not.
 
 ## 7.5 Transaction boundary
 
@@ -1106,6 +1243,186 @@ Do not block game-engine completion on community content population.
 
 ---
 
+# 12A. Audio and media architecture
+
+## 12A.1 Permanent authority boundary
+
+Audio is a media + presentation/content layer.
+
+The game engine stays audio-blind except for canonical answer mode/completion facts and, where genuinely needed, the presence of an authorized media reference.
+
+The engine must never depend on:
+
+- microphone state;
+- `MediaRecorder`;
+- waveform/codec details;
+- storage URLs;
+- TTS/ASR/VAD provider identity;
+- synthesis/transcription progress;
+- whether a clip finished playing.
+
+There is no authoritative `AUDIO_FINISHED` command. Playback ending never advances a turn or resolves an effect.
+
+## 12A.2 Audio domains
+
+Keep four concerns separate:
+
+1. **Game SFX / music** - presentation-only assets such as card draw/play, Nope, Roulette ticks, timer warnings, win sounds. Ship from a versioned client catalog/static asset path; do not create DB rows per playback.
+2. **System narration** - reusable host/system phrases. May be static or generated, but remains presentation.
+3. **Prompt narration** - derived audio reading of canonical prompt text. If audio and text disagree, text wins.
+4. **Player media** - explicit user-authored prompt recordings and any future explicitly approved stored answer recording.
+
+## 12A.3 Object storage and authorization
+
+Use an S3-compatible object-storage abstraction. Do not make game/domain code depend directly on one vendor.
+
+Preferred scalable transfer model:
+
+```text
+Client -> Railway API: request bounded upload/playback authorization
+Railway API: authenticate + authorize + choose object key + persist intent/metadata
+Railway API -> Client: short-lived purpose-bound signed authorization
+Client <-> Object Storage: direct byte transfer only for that authorization
+Client -> Railway API: confirm/attach resulting media ID
+```
+
+Rules:
+
+- no bucket credentials in clients;
+- no permanent raw object URLs in game state;
+- signed URLs expire;
+- API remains authority for ownership, visibility, media ID, purpose, retention, and moderation;
+- object storage carries bytes only.
+
+## 12A.4 Canonical text rule
+
+Every playable prompt keeps canonical text even if it has human audio or generated narration.
+
+For recorded prompts:
+
+```text
+record -> upload -> validate/process -> transcribe -> user confirms/corrects -> canonical prompt text -> eligible prompt
+```
+
+ASR must not silently overwrite or become canonical prompt text.
+
+## 12A.5 Privacy projection
+
+Media visibility follows the same audience rules as prompt/answer text.
+
+If a player cannot see a prompt, they must not receive:
+
+- its media ID;
+- signed playback URL;
+- transcript;
+- waveform;
+- metadata that reveals sealed/private content.
+
+Resolve expiring playback authorization at projection/API time rather than embedding raw URLs in canonical state.
+
+## 12A.6 Voice answer privacy
+
+Locked baseline:
+
+- `Speak` does not automatically create a persistent recording.
+- `Answered Live` stores completion only and never causes hidden recording.
+- no always-on room microphone/background capture.
+- future `Stored Voice Answer` is a separate explicit feature requiring room policy **and** the answering player's explicit per-submit consent.
+
+Stored answer recording is not a v1 implementation requirement and remains blocked until explicitly approved.
+
+## 12A.7 Prompt recording scope
+
+Architecture must support:
+
+- pregame room-contributed recorded prompts first;
+- in-game manual Truth/Dare/Duel prompt recording later through the same media domain.
+
+Session/manual recordings default to session-scoped retention unless explicitly saved into an approved library.
+
+## 12A.8 TTS / transcription providers
+
+Do not make a specific model/provider architectural authority.
+
+Use adapters such as:
+
+- `TtsProvider`
+- `TranscriptionProvider`
+- optional `VadProvider`
+
+The old reference plan names Piper/Kokoro, whisper.cpp, and Silero as implementation candidates. Re-evaluate versions, licensing, quality, latency, and deployment footprint when the relevant MEDIA task begins.
+
+Reference only:
+
+`funmarket/cribbit-chaos/docs/audio-media-plan.md`
+
+That old document is donor planning evidence, not CLEAN implementation authority.
+
+## 12A.9 TTS caching
+
+Prefer pre-generated narration for built-in/house prompts.
+
+Cache identity should include at least:
+
+- exact canonical text after safe Unicode/line-ending normalization;
+- locale;
+- voice key;
+- provider/model ID;
+- provider/model version;
+- codec;
+- synthesis-settings version.
+
+Do **not** normalize away punctuation/case merely to force cache collisions; punctuation can affect prosody and meaning.
+
+Generated narration is `regeneratable` media.
+
+## 12A.10 Media processing and moderation
+
+Upload processing is asynchronous and must not mutate game revision.
+
+Possible pipeline:
+
+```text
+upload accepted
+-> type/magic-byte validation
+-> duration/size validation
+-> transcode/normalize if required
+-> optional speech-presence check
+-> transcription when required
+-> moderation/eligibility checks
+-> ready / rejected / pending-review state
+```
+
+A processing failure must not corrupt the room/game. Text fallback remains available where the content is otherwise valid.
+
+## 12A.11 Retention and orphan cleanup
+
+At minimum support deterministic retention classes:
+
+- `system_permanent`
+- `regeneratable`
+- `library_content`
+- `session_temporary`
+- future `sensitive_temporary`
+
+Expired upload intents and unconsumed objects must be garbage-collected.
+
+Prompt deletion/tombstoning should detach media and purge object bytes according to retention policy rather than leaving indefinite orphan storage.
+
+## 12A.12 Web and Telegram UX
+
+Both clients use the same media IDs/API permissions but own platform-specific:
+
+- microphone permission UX;
+- recording controls;
+- autoplay unlock;
+- audio session interruptions;
+- playback/mute/volume behavior.
+
+Text remains visible/usable when audio cannot play.
+
+---
+
 # 13. Bots
 
 Bots use the same capabilities as humans.
@@ -1392,9 +1709,11 @@ Deliverable:
 - mapping from current P6/newer tables to target tables;
 - proof there is no production user/prompt data preservation requirement;
 - explicit treatment of any test game/session rows;
-- rollback/recovery plan for prelaunch reset.
+- rollback/recovery plan for prelaunch reset;
+- media-schema contract: `media_assets`, `prompt_media`, upload-intent/orphan-cleanup model, transcription evidence model, retention classes, room media policy, and playback/user preference boundary;
+- object-storage abstraction and authorization boundary without provisioning storage yet.
 
-No DB mutation in this task.
+No DB or object-storage mutation in this task.
 
 ### `DB-002` - Railway staging/production environment topology
 
@@ -1711,6 +2030,187 @@ Connect authoritative timed effects to durable deadline worker.
 
 ---
 
+## PHASE 6A - Audio/media implementation
+
+Audio/media is deliberately staged. It must shape the schema before schema freeze, but feature implementation must wait for its dependencies.
+
+### `MEDIA-000` - Audio/media roadmap baseline
+
+**Status:** `PASS`
+
+Planning result:
+
+- media is separated from game authority;
+- canonical prompt text remains authoritative;
+- bytes belong in object storage, metadata in PostgreSQL;
+- upload/playback uses short-lived API-issued authorization;
+- provider-specific TTS/ASR/VAD stays behind adapters;
+- Speak/Answered Live do not silently persist recordings;
+- `BASE-001` remains the current execution task.
+
+No audio source, database, object-storage, worker, deployment, or gameplay mutation was performed by this planning task.
+
+### `MEDIA-001` - Media architecture and schema lock
+
+**Status:** `NOT STARTED`
+
+Timing:
+
+Perform as part of/alongside `DB-001` **before the canonical schema is frozen**.
+
+Deliverables:
+
+- exact media table names/constraints;
+- retention classes;
+- object-storage adapter contract;
+- signed upload/playback authorization contract;
+- prompt-media relation;
+- transcription-confirmation flow;
+- room media policy versus user/device playback preference boundary;
+- privacy projection requirements;
+- orphan cleanup lifecycle.
+
+No provider provisioning or feature implementation in this task.
+
+### `MEDIA-002` - Media persistence and object-storage foundation
+
+**Status:** `BLOCKED`
+
+Prerequisites:
+
+- `DB-001 PASS`
+- canonical schema consolidation path approved/applied as appropriate;
+- `LIFE-001` authentication authority available;
+- explicit authorization for object-storage/environment mutation.
+
+Implement:
+
+- media metadata repository;
+- upload-intent lifecycle;
+- S3-compatible object-storage adapter;
+- short-lived signed upload/playback authorization;
+- attach/consume flow;
+- cleanup of expired/unconsumed uploads;
+- no engine dependency.
+
+### `MEDIA-003` - Game SFX / playback foundation
+
+**Status:** `NOT STARTED`
+
+Timing:
+
+During full client wiring after the exact presentation baseline is stable.
+
+Implement:
+
+- versioned SFX catalog;
+- playback/mixer abstraction;
+- SFX/music/narration volume controls;
+- mute;
+- Web/Telegram autoplay-unlock behavior;
+- no game-state mutation from playback.
+
+No per-play database event logging.
+
+### `MEDIA-004` - Prompt narration
+
+**Status:** `BLOCKED`
+
+Prerequisites:
+
+- `SYS-001` prompt-source abstraction;
+- canonical prompt persistence/content model;
+- `MEDIA-002`.
+
+Implement:
+
+- provider-neutral TTS adapter;
+- pre-generation for built-in/house prompts;
+- versioned cache key;
+- privacy-aware media projection;
+- text-first fallback;
+- narration failure never blocks rule resolution.
+
+### `MEDIA-005` - Pregame voice prompt recording
+
+**Status:** `BLOCKED`
+
+Prerequisites:
+
+- `LIFE-001` canonical identity;
+- `LIFE-002` room membership;
+- `SYS-003` pregame custom prompt flow;
+- `MEDIA-002`.
+
+Implement:
+
+- explicit microphone capture;
+- signed bounded upload;
+- validation/transcode;
+- transcription;
+- user transcript confirmation/correction;
+- canonical `prompts.text`;
+- `prompt_media` relation;
+- room policy;
+- moderation/eligibility state;
+- retention/orphan cleanup.
+
+### `MEDIA-006` - In-game manual voice prompt recording
+
+**Status:** `BLOCKED`
+
+Prerequisites:
+
+- `MEDIA-005 PASS`;
+- Manual Truth/Dare/Duel flows complete;
+- privacy projection complete.
+
+Reuse the same media path. Do not create a second recording subsystem.
+
+Default one-off manual recordings to session-scoped retention unless an explicit save-to-library action is later approved.
+
+### `MEDIA-007` - Stored voice answers
+
+**Status:** `BLOCKED`
+
+Product/privacy decision required.
+
+Baseline remains:
+
+- Speak = live, not automatically stored;
+- Answered Live = completion only;
+- no hidden recording.
+
+If later approved, stored answer audio must require explicit per-submit player consent, short retention by default, and separate projection/privacy tests.
+
+### `MEDIA-008` - Audio/media end-to-end and failure matrix
+
+**Status:** `BLOCKED`
+
+Run after the implemented media features are complete.
+
+Must cover:
+
+- Web microphone permissions;
+- Telegram microphone permissions;
+- autoplay restrictions;
+- expired upload URL;
+- expired playback URL;
+- interrupted upload;
+- orphan cleanup;
+- unsupported MIME;
+- over-duration/over-size;
+- transcription failure;
+- TTS unavailable;
+- object storage unavailable;
+- private/sealed prompt media leakage prevention;
+- deleted/tombstoned media;
+- reconnect during playback/recording;
+- text fallback;
+- no game advancement on audio completion.
+
+---
+
 ## PHASE 7 - Full client wiring
 
 ### `UI-001` - Lobby/Room Web wiring
@@ -1959,6 +2459,7 @@ Agents append concise evidence rows. Do not turn this into a chat transcript.
 |---|---|---|---|---|
 | 2026-09-20 | GOV-001 | PASS | `HANDOFF.md` commit `129450ea2edb842c9b3363947a865f869305d3a8`; `AGENTS.md` commit `112b2a49c084c499488be42520836e4555058d29` | Both governance files read back on the active branch. No gameplay/DB/deploy/merge mutation occurred. |
 | 2026-09-20 | BASE-001 | NOT STARTED | Exact-head hosted interaction evidence required | This is the next roadmap task. |
+| 2026-09-20 | MEDIA-000 | PASS | Audio/media architecture incorporated into the living roadmap | Planning only. No audio source, DB, object-storage, worker, deploy, merge, or gameplay mutation; BASE-001 remains NEXT TASK. |
 
 ---
 
@@ -1989,6 +2490,15 @@ Operational blockers currently visible:
 - no canonical merged post-UI-extraction baseline yet;
 - full donor engine port is not present remotely;
 - current architecture documentation elsewhere may describe older phases and must be reconciled as its relevant phase is reached.
+
+Audio/media product locks still requiring explicit later decision before the affected feature is implemented:
+
+- final production TTS provider/model/voice choices;
+- final ASR/VAD implementation choices;
+- exact media size/duration limits;
+- exact retention windows per media class;
+- whether in-game manual voice prompt recording is launch-critical or post-launch;
+- whether stored voice answers are ever enabled (currently blocked/not required for v1).
 
 ---
 
@@ -2029,6 +2539,12 @@ The project can be called complete only when all boxes are genuinely supported b
 - [ ] Bots complete
 - [ ] Timers/deadlines complete
 - [ ] Manual/Roulette prompts complete
+- [ ] Media schema/object-storage authorization path complete
+- [ ] Game SFX/audio preferences complete on Web and Telegram
+- [ ] Prompt narration complete with text fallback and privacy projection
+- [ ] Pregame prompt recording complete with transcript confirmation
+- [ ] Media retention/orphan cleanup proven
+- [ ] In-game manual voice prompt recording complete if retained in launch scope
 - [ ] Web exact UI fully wired
 - [ ] Telegram exact UI fully wired
 - [ ] Simulation uses canonical engine
