@@ -262,6 +262,20 @@ function telegramDiscardMarkup(card: GameViewCard | null): string {
 
 function hydrateWebTemplate(projection: GameViewProjection, state: PresentationState, view: 'lobby' | 'game', input?: { readonly busy?: boolean; readonly error?: string | null }): string {
   let html = applyOldWebMainPresentation(activateWebView(OLD_PACKAGES_UI_SRC_TEMPLATE_HTML, view)).replace('<main>', '<main class="cribbit-clean-web-home">');
+  html = html
+    .replace(
+      /(<input id="knobVoluntaryDraw"[^>]*)(\s*\/?>)/,
+      (_match: string, prefix: string, suffix: string) => {
+        const normalized = prefix
+          .replace(/\schecked(?:="[^"]*")?/g, '')
+          .replace(/\sdisabled(?:="[^"]*")?/g, '');
+        return `${normalized} checked disabled${suffix}`;
+      },
+    )
+    .replace(
+      'Not defined by the source. Off means Draw is available only when no legal card exists.',
+      'Canonical rule: Draw is always available on your normal turn, even when a legal play exists. Choosing Draw ends the ordinary turn.',
+    );
   html = setInputName(html, 'profileName', 'createName');
   html = setInputName(html, 'joinCode', 'sessionId');
   html = setInputDisabled(html, 'profileName', Boolean(input?.busy));
