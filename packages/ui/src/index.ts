@@ -1,24 +1,36 @@
 import type { GameViewProjection } from '../../contracts/src/view.ts';
-import { GAME_TABLE_STYLES } from './styles.ts';
+import { GAME_TABLE_STYLES, TELEGRAM_GAME_TABLE_STYLES, WEB_GAME_TABLE_STYLES } from './styles.ts';
 import { createPresentationState, renderGameTable, type PresentationState } from './game-table.ts';
 export * from './game-table.ts';
 export * from './web-controller.ts';
 export * from './telegram-controller.ts';
 export { GAME_TABLE_STYLES } from './styles.ts';
 
-const STYLE_ID = 'cribbit-game-table-styles';
+const STYLE_ID_BY_SURFACE = {
+  web: 'cribbit-web-styles',
+  telegram: 'cribbit-telegram-styles',
+} as const;
 export interface GameTableHandlers { readonly onDraw?: () => void; readonly onPlay?: (cardInstanceId: string) => void; readonly onStart?: () => void; }
 export interface MountedGameTable { (): void; update(projection: GameViewProjection): void; }
-export function ensureCribbitStyles(): void {
-  if (document.getElementById(STYLE_ID)) return;
+export function ensureCribbitStyles(surface?: 'web' | 'telegram'): void {
+  const inferredSurface =
+    document.querySelector<HTMLElement>('#app')?.dataset.accessSurface === 'telegram'
+      ? 'telegram'
+      : 'web';
+  const resolvedSurface = surface ?? inferredSurface;
+  const styleId = STYLE_ID_BY_SURFACE[resolvedSurface];
+  if (document.getElementById(styleId)) return;
   const style = document.createElement('style');
-  style.id = STYLE_ID;
-  style.textContent = GAME_TABLE_STYLES;
+  style.id = styleId;
+  style.textContent =
+    resolvedSurface === 'telegram'
+      ? TELEGRAM_GAME_TABLE_STYLES
+      : WEB_GAME_TABLE_STYLES;
   document.head.append(style);
 }
 function labelForCard(target: Element): string { return target.querySelector<HTMLElement>('.game-card__name')?.textContent?.trim() || 'Effect preview'; }
 export function mountGameTable(root: HTMLElement, projection: GameViewProjection, handlers: GameTableHandlers = {}, surface: 'web' | 'telegram' = 'web'): MountedGameTable {
-  ensureCribbitStyles();
+  ensureCribbitStyles(surface);
   const body = root.ownerDocument.body;
   const ownsGameViewClass = surface === 'web' && !body.classList.contains('is-game-view');
   if (surface === 'web') body.classList.add('is-game-view');

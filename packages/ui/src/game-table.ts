@@ -156,15 +156,56 @@ function cardIdentity(card: GameViewCard): CardPresentationIdentity | null {
   };
 }
 
-export function GameCard(card: GameViewCard, selected = false, playable = false): string {
+function webIconForCard(card: GameViewCard): string {
+  if (card.family === 'truth') return 'i-truth';
+  if (card.family === 'dare') return 'i-lightning';
+  if (card.family === 'paranoia') return 'i-paranoia';
+  if (card.family === 'chaos' || card.family === 'truth_or_chaos') return 'i-spiral';
+  if (card.family === 'duel') return 'i-swords';
+  if (card.family === 'nope') return 'i-hand';
+  if (card.family === 'reverse') return 'i-reverse';
+  if (card.family === 'draw') return 'i-draw';
+  if (card.family === 'skip') return 'i-skip';
+  return 'i-card';
+}
+
+function webCardMarkup(
+  card: GameViewCard,
+  interactive: boolean,
+  legal: boolean,
+  selected = false,
+): string {
   const identity = cardIdentity(card);
   const asset = identity ? resolveCardFaceAsset(identity) : null;
   const assetSrc = asset ? `/${asset}` : '';
-  const tone = card.color ?? (specialFamilies.has(card.family) ? 'special' : 'neutral');
-  const face = assetSrc
-    ? `<img class="game-card__art" src="${esc(assetSrc)}" alt="${esc(card.label)} card" loading="lazy" decoding="async"/>`
+  const kind = esc(card.family);
+  const color = card.color ? ` data-color="${esc(card.color)}"` : '';
+  const action = interactive
+    ? ` data-action="play-card" data-card-id="${esc(card.instanceId)}" data-selected="${String(selected)}" aria-disabled="${String(!legal)}"`
     : '';
-  return `<button class="game-card game-card--tg-hand" type="button" data-action="play-card" data-card-id="${esc(card.instanceId)}" data-selected="${selected}" data-playable="${playable}" data-family="${esc(card.family)}" data-tone="${esc(tone)}" data-asset="${esc(asset ?? '')}" aria-pressed="${selected}" aria-disabled="${String(!playable)}">${face}<span class="game-card__corner">${esc(card.label)}</span><span class="game-card__mark">${esc(card.family === 'number' ? card.label : card.label.slice(0, 3).toUpperCase())}</span><span class="game-card__name">${esc(card.label)}</span>${playable ? '<span class="game-card__legal-badge">PLAY</span>' : ''}</button>`;
+  const element = interactive ? 'button' : 'div';
+  const selectedClass = selected ? ' is-selected' : '';
+  const canonicalClass = assetSrc ? ' cc-has-canonical-face' : '';
+  const number =
+    card.family === 'number'
+      ? `<span class="game-card__icon is-number">${esc(card.value ?? card.label)}</span>`
+      : `<svg class="game-card__icon icon" aria-hidden="true"><use href="#${webIconForCard(card)}"></use></svg>`;
+  const canonicalFace = assetSrc
+    ? `<img class="cc-canonical-card-face" src="${esc(assetSrc)}" alt="" draggable="false" aria-hidden="true">`
+    : '';
+
+  return `<${element} class="game-card game-card--mini${selectedClass}${canonicalClass}" data-kind="${kind}"${color}${action} data-legal="${String(legal)}" ${interactive ? 'type="button"' : ''} aria-label="${esc(card.label)} card">
+    ${canonicalFace}
+    <span class="game-card__tab"><svg class="icon" aria-hidden="true"><use href="#${webIconForCard(card)}"></use></svg></span>
+    <strong class="game-card__title">${esc(card.label)}</strong>
+    ${number}
+    <p class="game-card__rule">Shared live session</p>
+    <svg class="frog-seal icon" aria-hidden="true"><use href="#i-frog"></use></svg>
+  </${element}>`;
+}
+
+export function GameCard(card: GameViewCard, selected = false, playable = false): string {
+  return webCardMarkup(card, true, playable, selected);
 }
 
 export function PlayerSeat(player: GameViewProjection['players'][number]): string {
@@ -172,7 +213,7 @@ export function PlayerSeat(player: GameViewProjection['players'][number]): strin
 }
 
 function webPlayerList(projection: GameViewProjection): string {
-  return projection.players.map(player => `<article class="player-seat${player.isCurrentTurn ? ' is-active' : ''}${player.isCurrentPlayer ? ' is-human' : ''}" data-current-turn="${player.isCurrentTurn}" data-current-player="${player.isCurrentPlayer}"><span class="player-avatar">${esc(player.avatarLabel)}</span><span class="player-copy"><b>${esc(player.displayName)}${player.isHost ? ' · Host' : ''}</b><small>${player.isCurrentTurn ? 'Playing now' : 'Ready'}</small></span><span class="player-cards">${player.cardCount}<small>cards</small></span></article>`).join('');
+  return projection.players.map(player => `<div class="player-row${player.isCurrentTurn ? ' is-current' : ''}${player.isCurrentPlayer ? ' is-you' : ''}"><span class="avatar">${esc(player.displayName.slice(0, 1).toUpperCase())}</span><span class="player-meta"><b>${esc(player.displayName)}</b><span>${player.isCurrentPlayer ? 'You' : player.connection === 'reconnecting' ? 'Reconnecting' : 'Connected'}</span></span><strong class="card-count">${player.cardCount}</strong></div>`).join('');
 }
 
 function statsGrid(projection: GameViewProjection): string {
@@ -180,7 +221,7 @@ function statsGrid(projection: GameViewProjection): string {
 }
 
 function phaseTrack(projection: GameViewProjection): string {
-  return `<span>${esc(projection.status)}</span><span>rev ${projection.revision}</span><span>${esc(projection.source === 'server' ? 'Connected' : 'Fixture preview')}</span>`;
+  return `<span class="phase-chip is-active">${esc(projection.status)}</span><span class="phase-chip">rev ${projection.revision}</span><span class="phase-chip">${esc(projection.source === 'server' ? 'Connected' : 'Fixture preview')}</span>`;
 }
 
 function handMarkup(projection: GameViewProjection, state: PresentationState): string {
@@ -189,7 +230,7 @@ function handMarkup(projection: GameViewProjection, state: PresentationState): s
 }
 
 function discardMarkup(card: GameViewCard | null): string {
-  return card ? GameCard(card, false, false).replace('game-card--tg-hand', 'game-card--tg-board') : '<span class="tg-empty-pile">No discard</span>';
+  return card ? webCardMarkup(card, false, false) : '<span class="tag">No discard</span>';
 }
 
 function telegramPlayerRail(projection: GameViewProjection): string {

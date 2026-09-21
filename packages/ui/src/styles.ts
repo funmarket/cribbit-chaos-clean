@@ -34,7 +34,7 @@ body:has(.cribbit-clean-web-home),body:has(.cribbit-clean-web-table){background:
 body:has(.cribbit-clean-telegram-home),body:has(.cribbit-clean-telegram-table){background:#03050a}
 `;
 
-export const GAME_TABLE_STYLES = [
+export const WEB_GAME_TABLE_STYLES = [
   OLD_PACKAGES_UI_SRC_STYLES_CSS,
   OLD_PACKAGES_UI_SRC_COMPACT_CARDS_CSS,
   OLD_PACKAGES_UI_SRC_DRAW_PILE_CARD_BACK_CSS,
@@ -42,6 +42,10 @@ export const GAME_TABLE_STYLES = [
   OLD_APPS_WEB_SRC_WEB_COMPACT_CSS,
   OLD_APPS_WEB_SRC_CANONICAL_HERO_CARDS_CSS,
   OLD_APPS_WEB_SRC_CANONICAL_BOARD_CARDS_CSS,
+  CLEAN_BINDING_ADAPTER_CSS,
+].join('\n\n');
+
+export const TELEGRAM_GAME_TABLE_STYLES = [
   OLD_APPS_TELEGRAM_SRC_STYLES_TELEGRAM_CSS,
   OLD_APPS_TELEGRAM_SRC_STYLES_GAME_CSS,
   OLD_APPS_TELEGRAM_SRC_STYLES_CARDS_CSS,
@@ -49,3 +53,6 @@ export const GAME_TABLE_STYLES = [
   OLD_APPS_TELEGRAM_SRC_STYLES_HARDENING_CSS,
   CLEAN_BINDING_ADAPTER_CSS,
 ].join('\n\n');
+
+/** Compatibility export for source-inspection tests only. Runtime injection is surface-specific. */
+export const GAME_TABLE_STYLES = `${WEB_GAME_TABLE_STYLES}\n\n${TELEGRAM_GAME_TABLE_STYLES}`;
