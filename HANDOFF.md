@@ -16,6 +16,8 @@
 This file owns **execution continuity and roadmap state**. It does not replace:
 
 - `gamerules.md` for canonical game-rule authority;
+- `docs/product-scope.md` for whole-product scope, source hierarchy, preservation, and single-authority change principles;
+- `docs/control-room.md` for Admin/Control Room architecture and safe-change boundaries;
 - owner decisions made after `gamerules.md`, which must be added there with explicit supersession before conflicting mechanics are implemented;
 - source code/tests for verified implementation behavior;
 - Git/GitHub/Railway/Cloudflare live state for current operational facts.
@@ -28,12 +30,14 @@ At the start of **every** Cribbit CLEAN engineering session:
 
 1. Read `AGENTS.md` completely.
 2. Read this `HANDOFF.md` completely.
-3. Read the rule sections relevant to the intended task in `gamerules.md`.
-4. Verify the current branch, exact HEAD SHA, PR state, CI state, and any external state the task depends on.
-5. Identify exactly one task ID from the roadmap below as the current task.
-6. Do not broaden scope beyond that task.
-7. Before mutation, verify that the task's prerequisites and authority are satisfied.
-8. After the task, run its required checks and update this file's **Live Execution Ledger** and task status.
+3. Read `docs/product-scope.md`.
+4. Read `docs/control-room.md` when Admin/operations/config/change-control is relevant.
+5. Read the rule sections relevant to the intended task in `gamerules.md`.
+6. Verify the current branch, exact HEAD SHA, PR state, CI state, and any external state the task depends on.
+7. Identify exactly one task ID from the roadmap below as the current task.
+8. Do not broaden scope beyond that task.
+9. Before mutation, verify the task prerequisites, authority/change intent, and affected Whole-App Transfer Matrix rows.
+10. After the task, run required checks and pass the **Documentation Sync Gate** before declaring completion.
 
 ### 0.3 What agents may update without changing product intent
 
@@ -69,6 +73,22 @@ Use only:
 - `PASS`
 
 A task becomes `PASS` only when its required evidence is collected for the exact candidate state.
+
+### 0.4A Mandatory Documentation Sync Gate
+
+Every implementation/edit must leave permanent execution documentation current.
+
+Before an agent declares a task complete it must, where applicable:
+
+- update the task status and exact evidence in this HANDOFF;
+- append one concise Live Execution Ledger row;
+- update affected Whole-App Transfer Matrix rows;
+- update authority/decision records if ownership changed;
+- record exact SHA/PR/CI/deployment identifiers required by the task;
+- record remaining blockers;
+- move `NEXT TASK` only after current-task acceptance is proven.
+
+A task is not complete if the code/deployment changed but the canonical roadmap/authority records are knowingly stale.
 
 ### 0.5 Current roadmap pointer
 
@@ -106,6 +126,24 @@ older Railway API contract
             v
 staging DB service inside ambiguously named Railway environment
 ```
+
+#### Verified execution progress - 2026-09-21
+
+Data classification and safer staging separation have advanced without production DB mutation:
+
+- old DB service `cribbit-chaos-clean-staging-db` inside the Railway environment named `production` contains the older five-table game-core schema and disposable test data: 49 game sessions, 80 memberships, 79 outbox rows, 20 accepted-command receipts, 0 deadline jobs;
+- owner explicitly classified those 49 staging sessions as **disposable**;
+- `cribbit-chaos-clean-production-db` contains the same older five-table schema but zero rows across all five tables;
+- neither old DB had an application migration/version table;
+- a real Railway environment named `staging` now exists: `1d7bda4d-8249-4291-a227-1a223079a687`;
+- its intended database is `cribbit-chaos-clean-staging-postgres-v16`, service `7b2586e8-5ef0-4625-9fdf-181a3ac8a1e6`;
+- that DB is PostgreSQL 16, has persistent volume `postgres-data-v16`, and latest verified deployment `ed90401d-4785-4289-835c-e66f15541066` is `SUCCESS`;
+- the accidental staging PostgreSQL 18 service was removed after the PostgreSQL 16 replacement was proven healthy;
+- fresh Railway verification shows production still contains the historical API, old staging DB, and production DB; production DB was not reset/migrated;
+- the historical API still deploys branch `phase/p7a-playable-visual-slice` at commit `714d70c7a55ff4e15f78fb3159473207a7db2990`;
+- no current CLEAN staging API has been created/aligned yet.
+
+**Next BASE-001A execution slice:** initialize/verify the canonical CLEAN schema on the new staging PostgreSQL 16 path, deploy the accepted CLEAN API candidate into the real staging environment, then align both staging frontends and prove exact version/environment identity. Production remains protected.
 
 #### Permanent target
 
@@ -182,9 +220,12 @@ Web and Telegram never get separate APIs, game engines, user stores, or database
    - do not delete historical deployments, branches, databases, or PRs under this gate;
    - cleanup remains separately authorized work.
 
-10. **Return to product construction**
+10. **Return to whole-product construction**
     - after staging convergence and `BASE-001` pass, stop expanding infrastructure scope;
-    - continue canonical room/game lifecycle, donor mechanics matrix, core engine, forced/social rules, prompts/Roulette, bots, timers, and canonical simulation.
+    - complete `APP-001` Whole-App Transfer Matrix and minimum `ARCH-GUARD-001/002` protections before final schema freeze;
+    - complete `ADMIN-001` Control Room/RBAC/audit/change-boundary design before final schema freeze;
+    - continue canonical identity/profile, rooms/group context, prompt/content/library domains, game lifecycle/engine/social rules, recap/history/group memory, Call Mode/media, exact Web/Telegram wiring, Control Room implementation, and canonical simulation;
+    - do not let game-board mechanics crowd out the rest of the application.
 
 #### Hard guards
 
@@ -274,6 +315,51 @@ The mission is:
 > **Same Cribbit game, same verified UI/UX and CHAOS-133-V1 art - rebuilt underneath as one clean server-authoritative, production-ready modular monolith with one canonical PostgreSQL schema and shared Web/Telegram clients.**
 
 The old project is a donor/reference for what was already good. The clean project is the implementation authority.
+
+## 1.1A Whole-product scope
+
+Cribbit is the **whole social-game application**, not only the table.
+
+The retained product map is maintained in `docs/product-scope.md` and includes, where retained/verified:
+
+- Homepage/Lobby and room creation;
+- authentication, profile and preferences;
+- Tonight's CHAOS room/content setup;
+- CHAOS Board;
+- My Saved Deck;
+- House Deck / persistent group lore;
+- Live Room Pool;
+- Create Prompt;
+- authorship/reveal policy;
+- moderation and flags;
+- active game;
+- explicit Call Mode/answer modes;
+- Recap, Save That, Resolved Moments, history/group memory;
+- search/notifications/application shell;
+- Rules & Lab / Local QA Simulation as non-production-authority test surfaces;
+- audited Cribbit Control Room for users/content/operations and controlled change proposals.
+
+A working board is necessary but not sufficient for completion.
+
+## 1.1B Domain-specific source hierarchy
+
+**Gameplay:** owner decisions/supersessions -> `gamerules.md` -> clean rule/provenance -> donor evidence -> early bibles/flyers as ideas only.
+
+**UI/UX/product flow:** owner decisions -> verified evolved donor app -> exact extracted CLEAN presentation -> early bibles/flyers as ideas only.
+
+**Operational state:** fresh GitHub/Railway/Cloudflare/database evidence only.
+
+## 1.1C Preservation rule
+
+**Legacy does not mean safe to delete.** Donor behavior/UI/schema/content/deployment evidence is preserved until `APP-001` maps it to a verified CLEAN replacement or explicitly classifies it obsolete.
+
+## 1.1D Single Authority / Change Propagation Contract
+
+The old app accumulated conflicts because one semantic edit could land in multiple runtimes/handlers/pages. CLEAN must prevent recurrence.
+
+Every significant change declares one canonical owner, expected targets/consumers, tests, DB/Web/Telegram/Admin/simulation impact, and explicitly unaffected domains.
+
+Semantic behavior is implemented once in its canonical owner and projected outward. Planned machine enforcement is tracked by `ARCH-GUARD-001..005`.
 
 ## 1.2 Definition of the finished product
 
@@ -2143,7 +2229,7 @@ Gate:
 
 ### `BASE-001A` - Exact-head staging infrastructure alignment and data classification
 
-**Status:** `NOT STARTED`
+**Status:** `IN PROGRESS`
 
 Goal:
 
@@ -2345,6 +2431,89 @@ A new agent with no chat history can open the default branch, read `AGENTS.md` a
 
 ---
 
+## PHASE 1B - Whole-app transfer, change authority, and Control Room design
+
+These are required design/classification gates before final schema freeze. They do not authorize broad feature implementation or donor deletion.
+
+### `APP-001` - Whole-App Transfer Matrix
+
+**Status:** `NOT STARTED`
+
+Read-only classification.
+
+For every retained donor/app surface record:
+
+- capability;
+- donor UI/behavior evidence;
+- data ownership/lifecycle;
+- current CLEAN support;
+- canonical CLEAN domain;
+- API/query/command boundary;
+- persistence destination;
+- Web presentation;
+- Telegram presentation;
+- Admin/Control Room relationship if any;
+- automated/hosted proof;
+- transferred / partial / obsolete / unresolved status.
+
+At minimum cover Homepage/Lobby, room creation, Tonight's CHAOS, CHAOS Board, My Saved Deck, House Deck, Live Room Pool, Create Prompt, authorship/moderation, active game, Call Mode, Recap/Save That, Resolved Moments/history, profile/preferences, search/notifications, Rules & Lab, Local QA Simulation, and Control Room.
+
+No donor deletion is authorized by this task.
+
+### `ARCH-GUARD-001` - Product Authority Registry
+
+**Status:** `NOT STARTED`
+
+Create a machine-readable registry mapping major product concepts/`RULE-*` families to canonical owner, persistence owner, presentation consumers, required tests, and forbidden duplicate-authority locations.
+
+### `ARCH-GUARD-002` - Change Intent / Impact Checker
+
+**Status:** `NOT STARTED`
+
+Require significant changes to declare authority, expected targets/consumers, tests, DB/Web/Telegram/Admin/simulation impact, and unaffected domains. Fail closed on undeclared scope expansion.
+
+### `ARCH-GUARD-003` - Diff Ownership Enforcement
+
+**Status:** `NOT STARTED`
+
+Detect/deny diffs that introduce canonical game/domain authority into presentation adapters, platform-specific duplicate services, simulation reducers, arbitrary Admin authority, or undeclared schema/domain targets.
+
+### `ARCH-GUARD-004` - Rule Impact Registry
+
+**Status:** `NOT STARTED`
+
+Map each implemented `RULE-*` family to engine owner, command/capability contracts, projections, tests and UI surfaces so future rule edits do not depend on repository-wide guesswork.
+
+### `ARCH-GUARD-005` - Duplicate Authority Detection
+
+**Status:** `NOT STARTED`
+
+Static/adversarial checks for duplicate rule tables/reducers/domain stores or parallel Web/Telegram/Admin/simulation authorities.
+
+### `ADMIN-001` - Control Room architecture, RBAC, audit and change-boundary design
+
+**Status:** `NOT STARTED`
+
+Design-only before DB freeze.
+
+Deliver:
+
+- Control Room module boundaries;
+- capability-based RBAC model;
+- audit event contract;
+- runtime-managed vs source-controlled change classification;
+- users/rooms/games/content/safety/operations surface ownership;
+- Rule Studio workflow over `ARCH-GUARD-001..005`;
+- break-glass/re-auth model;
+- schema requirements to feed `DB-001`;
+- explicit prohibition on arbitrary production SQL/source editing.
+
+See `docs/control-room.md`.
+
+**Ordering gate:** after `BASE-001A/BASE-001`, complete `APP-001`, minimum `ARCH-GUARD-001/002`, and `ADMIN-001` before `DB-001` freezes the canonical schema.
+
+---
+
 ## PHASE 2 - Database authority and environment cleanup
 
 ### `DB-001` - Final schema design and migration-authority decision
@@ -2352,6 +2521,8 @@ A new agent with no chat history can open the default branch, read `AGENTS.md` a
 **Status:** `NOT STARTED`
 
 Read-only/design task first.
+
+**Prerequisite before final schema freeze:** `APP-001 PASS`, minimum `ARCH-GUARD-001/002` design locked, and `ADMIN-001 PASS`.
 
 Deliverable:
 
@@ -2361,6 +2532,8 @@ Deliverable:
 - mapping from current P6/newer tables to target tables;
 - proof there is no production user/prompt data preservation requirement;
 - explicit treatment of any test game/session rows;
+- retained durable ownership/lifecycle for profile/preferences, room/group context, room configuration, prompts/content, My Saved Deck, House Deck, Live Room Pool, moderation/flags, explicit answers, Recap/Resolved Moments/Save That/history, and media metadata where retained;
+- Control Room persistence decision for admin roles/capabilities, audit events, moderation actions, runtime configuration, change proposals/approvals, and break-glass events (only where persistence is actually required);
 - rollback/recovery plan for prelaunch reset;
 - media-schema contract: `media_assets`, `prompt_media`, upload-intent/orphan-cleanup model, transcription evidence model, retention classes, room media policy, and playback/user preference boundary;
 - object-storage abstraction and authorization boundary without provisioning storage yet.
@@ -2682,7 +2855,25 @@ Implement according to narrow canonical eligibility and prompt existence.
 
 ---
 
-## PHASE 6 - Prompts, Roulette, bots, timers
+## PHASE 6 - Living content, prompts, Roulette, bots, timers
+
+### `SYS-000A` - Prompt/content domain foundation
+
+**Status:** `NOT STARTED`
+
+Implement canonical Cribbit Originals/community/custom prompt records, provenance, eligibility metadata, authorship/reveal metadata, moderation status and flags according to `APP-001/DB-001` ownership.
+
+### `SYS-000B` - Library and group-memory foundations
+
+**Status:** `NOT STARTED`
+
+Implement distinct ownership/lifecycle for My Saved Deck, House Deck, Live Room Pool and Resolved Moments. Do not collapse them into ambiguous bookmarks.
+
+### `SYS-000C` - Create Prompt and moderation workflow
+
+**Status:** `NOT STARTED`
+
+Implement approved authoring destinations, validation, creator attribution/sealing, moderation queue/state and safety/report handling without client approval authority.
 
 ### `SYS-001` - Prompt-source abstraction
 
@@ -2949,6 +3140,67 @@ Desktop/tablet/mobile + readable light/dark modes + keyboard/touch semantics.
 
 ---
 
+### `UI-008` - CHAOS Board / Library / Create Prompt Web wiring
+
+**Status:** `NOT STARTED`
+
+Wire retained donor surfaces to canonical content/library/moderation domains:
+
+- CHAOS Board;
+- My Saved Deck;
+- House Deck;
+- Live Room Pool;
+- Resolved Moments;
+- Create Prompt destinations/authorship/moderation.
+
+### `UI-009` - Recap / Save That / history
+
+**Status:** `NOT STARTED`
+
+Wire completed-session recap, resolved moments, Save That destinations, voluntary sharing and persistent history/group-memory projections.
+
+### `UI-010` - Call Mode product wiring
+
+**Status:** `NOT STARTED`
+
+Preserve retained Call Mode with explicit Speak/Type/Choose/Answered Live actions and no passive conversation input.
+
+### `UI-011` - Application shell: profile, search, notifications
+
+**Status:** `NOT STARTED`
+
+Wire retained profile/preferences, global search/navigation, notifications and connection-state surfaces to canonical domains where durable.
+
+---
+
+## PHASE 7A - Control Room implementation
+
+### `ADMIN-002` - Read-only Control Room
+
+**Status:** `NOT STARTED`
+
+Build privileged read-only views first: users/accounts, rooms/games diagnostics, content/moderation state, deployment/version/environment status and audit viewer.
+
+### `ADMIN-003` - Typed moderated/runtime actions
+
+**Status:** `NOT STARTED`
+
+Add only explicitly designed RBAC-protected, validated, audited runtime actions. No arbitrary SQL/state editing.
+
+### `ADMIN-004` - Rule Studio / source-change proposals
+
+**Status:** `NOT STARTED`
+
+Integrate Product Authority Registry, Change Intent/Impact Checker, Rule Impact Registry and Git/PR/CI/staging workflow. Rule Studio proposes/orchestrates; it does not directly rewrite production engine semantics.
+
+### `ADMIN-005` - Control Room production hardening
+
+**Status:** `NOT STARTED`
+
+Prove RBAC, re-auth/break-glass, audit integrity, environment separation, redaction, rate/abuse controls and recovery.
+
+---
+
 ## PHASE 8 - Simulation as canonical harness
 
 ### `SIM-001` - Replace fixture simulation with canonical API sessions
@@ -3062,6 +3314,18 @@ Using one securely linked canonical account, prove:
 - same human game-player seat/private hand when moving between clients;
 - no duplicate Web user/Telegram user is created.
 
+### `ACC-004B` - Whole-app content/library/history cross-client acceptance
+
+**Status:** `NOT STARTED`
+
+Prove the same linked user sees the same profile/preferences, rooms, saved prompts, House content, Live Room Pool, history/recaps and active game across Web/Telegram, subject to correct authorization/privacy.
+
+### `ACC-004C` - Control Room acceptance
+
+**Status:** `NOT STARTED`
+
+Prove Admin RBAC/audit, environment/version identity, moderation actions, runtime/source-change boundary and failure-closed production protections.
+
 ### `ACC-005` - Production release candidate
 
 **Status:** `BLOCKED`
@@ -3109,7 +3373,8 @@ A source task is not done until:
 - `npm run verify` passes when required by the task;
 - exact diff is inspected;
 - exact SHA is recorded;
-- this handoff is updated.
+- affected Whole-App Transfer Matrix/authority records are synchronized;
+- this handoff passes the Documentation Sync Gate.
 
 ## 22.2 Database task
 
@@ -3158,6 +3423,8 @@ GOAL:
 CURRENT BRANCH:
 START SHA:
 AUTHORITATIVE RULE/DOC:
+CHANGE INTENT / CANONICAL OWNER:
+AFFECTED PRODUCT-SCOPE / TRANSFER-MATRIX ROWS:
 ALLOWED TARGETS:
 FORBIDDEN TARGETS:
 PREREQUISITES:
@@ -3168,7 +3435,9 @@ FULL GATES:
 RESULT SHA:
 CI RUN:
 RUNTIME/DEPLOYMENT EVIDENCE:
-HANDOFF UPDATE:
+AUTHORITY/DECISION DOC UPDATE:
+TRANSFER-MATRIX UPDATE:
+HANDOFF / DOCUMENTATION SYNC:
 NEXT TASK / BLOCKER:
 ```
 
@@ -3188,7 +3457,8 @@ Agents append concise evidence rows. Do not turn this into a chat transcript.
 | 2026-09-20 | ARCH-001 | PASS | Single Product / Cross-Client Identity Invariant added to HANDOFF | Owner locked Web and Telegram as presentation adapters over the same canonical user/identity/room/game/prompt/permissions/API/engine/PostgreSQL authority. No source, DB, deployment, branch, or NEXT TASK change. |
 | 2026-09-20 | LIFE-001 / LIFE-001A / ACC-004 / ACC-004A | IN PROGRESS | Source convergence candidate `11e7ef29be068a1a16cfc2f26e061fedb04072f0`; CI run `35531377108` PASS | Shared canonical user/auth/game principal path and automated cross-client identity/game proof implemented. No Railway DB migration, API deployment, merge, or production activation performed. `BASE-001` remains NEXT TASK. |
 | 2026-09-20 | LIFE-001B | IN PROGRESS | Optional login-method source update in current candidate | Telegram-only and Web-only accounts are first-class; linking is optional; Telegram username is suggestion metadata only; username equality never auto-links. Hosted account UI/proof remains later work. `BASE-001` was the next task at that point. |
-| 2026-09-20 | BASE-001A | NOT STARTED | Verified hosted skew: current Web/Telegram previews on `b5393beb...`; Railway API still on `714d70c7...`; API DB reference resolves to `cribbit-chaos-clean-staging-db` inside Railway environment named `production` | Owner approved the locked convergence plan in section 0.5A. Documentation-only update; no Railway, Cloudflare, DB, source, `main`, merge, or deployment mutation. `BASE-001A` is now NEXT TASK and `BASE-001` is blocked on it. |
+| 2026-09-20/21 | BASE-001A | IN PROGRESS | DB classification complete; old staging data disposable; production DB empty; real Railway `staging` env `1d7bda4d...`; PostgreSQL 16 service `7b2586e8...` deployment `ed90401d...` SUCCESS; historical production-environment API still on `714d70c7...` | Production DB remained untouched. Next slice is canonical staging schema + current CLEAN staging API + frontend alignment/version proof. |
+| 2026-09-21 | DOC-REBASE-001 | PASS | Whole-product scope, Control Room architecture, live Documentation Sync Gate, authority guards and schema/domain roadmap introduced in current docs-only rebaseline | No gameplay rule/source, DB migration, Railway/Cloudflare, `main`, merge or production mutation belongs to this documentation task. |
 
 ---
 
@@ -3215,7 +3485,8 @@ Operational blockers currently visible:
 
 - current exact-head hosted interaction proof for UI extraction;
 - source migration authority is now consolidated on candidate `11e7ef29be068a1a16cfc2f26e061fedb04072f0`, but the intended live Railway database has **not** been migrated or verified against that canonical schema;
-- Railway API currently references the service named staging DB while running inside the environment named production;
+- real Railway `staging` environment and healthy PostgreSQL 16 DB now exist, but a current CLEAN staging API is not deployed/aligned yet;
+- historical Railway API remains in environment `production` on old commit `714d70c7...`; the old staging DB and production DB are preserved there until replacement/data ownership is fully proven;
 - no canonical merged post-UI-extraction baseline yet;
 - full donor engine port is not present remotely;
 - current architecture documentation elsewhere may describe older phases and must be reconciled as its relevant phase is reached;
@@ -3237,7 +3508,11 @@ Audio/media product locks still requiring explicit later decision before the aff
 Agents must not:
 
 - restart the clean rebuild from zero;
+- treat Cribbit as only a game-table project and omit retained room/content/library/history/Call Mode/Admin application scope;
 - replace the extracted old UI with a new design;
+- delete donor behavior/schema/content/deployment evidence merely because CLEAN does not currently reference it;
+- independently implement the same rule/domain behavior in Web, Telegram, Admin, simulation, API handlers and engine code;
+- add persistence because one page needs data without first identifying the canonical owning domain;
 - import the old runtime wholesale;
 - restore multiple game authorities;
 - create separate Web and Telegram user/account domains for the same product;
@@ -3270,9 +3545,21 @@ The project can be called complete only when all boxes are genuinely supported b
 - [ ] Room/game/content ownership references canonical users.id rather than platform identity
 - [ ] Web and Telegram share one room/game/prompt/library/history/permissions authority
 - [ ] Switching a linked active player between Web and Telegram preserves the same game seat and private hand
-- [ ] Canonical Room lifecycle
+- [ ] Canonical profile/preferences shared across linked clients
+- [ ] Canonical Room lifecycle and persistent group context
+- [ ] Tonight's CHAOS room/content configuration
+- [ ] CHAOS Board backed by canonical content/moderation
+- [ ] My Saved Deck canonical-user ownership
+- [ ] House Deck explicit shared-group ownership
+- [ ] Live Room Pool shared room ownership
+- [ ] Create Prompt destinations/authorship/moderation
+- [ ] Recap / Save That / Resolved Moments / history-group memory
+- [ ] Call Mode explicit input with no passive listening
 - [ ] Canonical Room -> Game start boundary
-- [ ] One clean PostgreSQL schema/migration chain
+- [ ] Whole-App Transfer Matrix complete before donor cleanup/schema freeze
+- [ ] Product Authority Registry + Change Intent/Impact enforcement active
+- [ ] Control Room RBAC/audit/change-boundary architecture and implementation proven
+- [ ] One clean PostgreSQL schema/migration chain covering retained whole-product domains
 - [ ] Staging/production isolated correctly
 - [ ] Full CHAOS-133-V1 deck verified
 - [ ] Ordinary mechanics complete
@@ -3302,6 +3589,9 @@ The project can be called complete only when all boxes are genuinely supported b
 - [ ] Hosted Web E2E passes
 - [ ] Hosted Telegram E2E passes
 - [ ] Cross-client E2E passes
+- [ ] Whole-app Web E2E covers retained content/library/history surfaces
+- [ ] Whole-app Telegram/cross-client continuity covers retained shared domains
+- [ ] Control Room security/audit/change-boundary acceptance passes
 - [ ] Production smoke passes
 - [ ] No active legacy/parallel authority remains
 
@@ -3318,11 +3608,13 @@ It is to complete one authoritative path:
 ```text
 Owner-approved rules
        +
-Verified old product presentation/mechanics evidence
+Verified old whole-product presentation/behavior evidence
        v
+Clean shared product domains
+       +
 Clean pure game engine
        v
-Clean application command handlers
+Clean application command/query handlers
        v
 One clean PostgreSQL schema
        v
@@ -3331,6 +3623,8 @@ Railway API
 Shared API client
        v
 Exact Web / Telegram presentation
+       +
+Audited Control Room / safe change pipeline
 ```
 
 Every task in this roadmap exists to move the project closer to that single path without creating a second one.

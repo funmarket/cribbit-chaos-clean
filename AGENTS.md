@@ -2,197 +2,234 @@
 
 This file is mandatory for every human or AI engineering agent working in `funmarket/cribbit-chaos-clean`.
 
-## 1. Read-first rule
+## 1. Read-first protocol
 
 Before inspecting or changing code:
 
 1. Read `HANDOFF.md` completely.
-2. Read the relevant rule sections in `gamerules.md`.
-3. Verify the live repository branch/HEAD/PR state.
-4. Select exactly one current task ID from `HANDOFF.md`.
-5. Work only inside that task's allowed scope.
+2. Read `docs/product-scope.md`.
+3. Read `docs/control-room.md` when Admin/operations/config/change-control is relevant.
+4. Read the relevant `gamerules.md` clauses for gameplay work.
+5. Verify live branch/HEAD/PR/CI and any external state the task depends on.
+6. Select exactly one current HANDOFF task ID.
+7. Work only inside that task's allowed scope.
 
-`HANDOFF.md` is the canonical living roadmap and execution ledger. Always return to it after each task and update its status/evidence before claiming completion.
+`HANDOFF.md` is the live roadmap/evidence ledger. Return to it after every task.
 
-## 2. Operating character: evidence-first Hermes discipline
+## 2. Product mission
 
-Work as a skeptical senior engineer/reviewer:
-
-- verify claims against the actual repository/live service;
-- do not accept summaries when exact state can be inspected;
-- do not reject a claim without checking it when checking is possible;
-- distinguish verified facts, owner rules, inference, and unknowns;
-- keep instructions direct and execution-focused;
-- prefer a few high-leverage checks over broad unfocused audits;
-- never invent missing rule semantics;
-- stop on contradictions instead of silently choosing a convenient source;
-- do not report `fixed`, `green`, `deployed`, `safe`, or `complete` without exact evidence.
-
-## 3. Product mission
-
-Do not redesign Cribbit.
+Do not redesign Cribbit and do not reduce it to the game table.
 
 Goal:
 
-> Same Cribbit game, same verified UI/UX and CHAOS-133-V1 art, rebuilt underneath as one clean server-authoritative, production-ready modular monolith with one canonical PostgreSQL schema and shared Web/Telegram clients.
+> **Same Cribbit game, same verified whole-product experience and CHAOS-133-V1 art, rebuilt underneath as one clean server-authoritative modular monolith with clean domains, one canonical PostgreSQL authority per environment, and shared Web/Telegram clients.**
 
-The old project is donor/reference evidence. The clean repository is the production implementation authority.
+Retained scope includes rooms/group context, CHAOS Board, My Saved Deck, House Deck, Live Room Pool, player-created content/moderation, Call Mode, safety, Recap/Save That/history/group memory, profile/preferences, application shell and an audited Control Room.
 
-## 4. Permanent architecture rules
+## 3. Source hierarchy
 
-- One authoritative game engine: `packages/game-engine/**`.
-- One authoritative server command/application path in the Railway Node API.
-- One canonical PostgreSQL schema/migration chain.
-- `packages/api-client` is the frontend HTTP boundary.
-- Web and Telegram render server projections; no client gameplay engine.
-- No fallback local game when the API is unavailable.
-- No client deck, turn, Roulette, prompt, winner, or effect authority.
-- No import/reactivation of `packages/legacy-runtime/**`, `canonical-game-runtime.ts`, old Telegram simulation runtime, or parallel gameplay reducers.
-- Simulation must use the same API/engine as real play.
-- One authority does not mean one giant file: special-rule families use focused modules/handlers.
+Authority is domain-specific.
 
-## 5. Rule authority
+Gameplay:
 
-`gamerules.md` plus explicit later owner decisions are gameplay authority.
+1. current owner decisions/supersessions;
+2. `gamerules.md`;
+3. clean rule/provenance docs;
+4. donor code/tests as evidence;
+5. early bibles/flyers as ideas only.
 
-Old runtime behavior, old tests, artwork text, or Git chronology never overrides a later owner correction merely because it exists.
+UI/UX/product flow:
 
-Known corrections that must survive include target-first Truth, target-first Reverse Confession, corrected Duel voting/timer/Nope behavior, corrected Truth-or-Chaos group behavior, corrected TAG immediate draw meaning, and the owner-approved forced-on-draw list.
+1. current owner decisions;
+2. verified evolved donor app;
+3. extracted CLEAN presentation;
+4. early bibles/flyers as ideas only.
 
-If a rule is marked unresolved, do not implement a default.
+Operational facts require fresh live verification.
 
-## 6. Donor-engine rule
+## 4. Donor preservation
 
-Pinned old donor evidence may be inspected and selectively ported.
+**Legacy does not mean safe to delete.**
 
-Port:
+Do not remove donor behavior/UI/schema/content/deployment evidence until `APP-001` proves its CLEAN replacement or explicitly classifies it obsolete.
 
-- mechanics;
-- algorithms;
-- invariants;
-- focused modules;
-- regression tests.
+Do not wholesale reactivate donor runtime as production authority.
 
-Do not wholesale transplant the old 123 KB reducer or old runtime/application/persistence authority.
+## 5. Permanent architecture rules
 
-For every ported mechanic, compare donor behavior to current canonical rules first.
+- One authoritative gameplay engine: `packages/game-engine/**`.
+- One authoritative server application/command/query path in the Node API.
+- One canonical PostgreSQL schema/migration chain per environment.
+- `packages/api-client` is the shared frontend transport boundary.
+- Web/Telegram render server projections; no client gameplay engine.
+- Control Room uses the same canonical domains; no admin game engine or direct DB authority.
+- No local fallback production game.
+- No client-owned deck/turn/Roulette/prompt/winner/effect authority.
+- Simulation uses the same engine/contracts.
+- Special families use focused modules; one authority does not mean one giant file.
 
-## 7. Database rules
+## 6. Single Authority / Change Propagation Contract
 
-The repository currently contains competing persistence generations. The long-term target is one clean schema.
+The old app's corruption/conflict pattern must not recur.
 
-Do not create a third schema path.
+For every significant change:
 
-Do not apply/drop/reset/migrate any shared database unless the active `HANDOFF.md` task explicitly authorizes that exact mutation and the exact Railway environment/database is freshly verified.
+1. identify the canonical rule/domain/presentation owner;
+2. declare expected changed targets/consumers;
+3. declare required tests;
+4. declare DB/Web/Telegram/Admin/simulation impact;
+5. declare explicitly unaffected domains;
+6. implement semantics once in the canonical owner;
+7. let API projections/api-client/frontends consume it;
+8. reject duplicate authority.
 
-The project is fresh and no production user/prompt corpus needs preservation, but that fact alone is not authorization for a destructive reset.
+Never independently "fix the same rule" in Web, Telegram, simulation, Admin, API handlers and engine.
 
-Target environment topology is documented in `HANDOFF.md`.
+Planned enforcement tasks: `ARCH-GUARD-001..005`.
 
-## 8. UI/UX rules
+## 7. Rule authority
 
-The extracted old Web and Telegram UI is presentation authority.
+`gamerules.md` plus explicit later owner supersessions are gameplay authority.
 
-Do not recreate or modernize it for convenience.
+Known owner corrections such as target-first Truth/Reverse Confession, Duel voting/timer/Nope behavior, Truth-or-Chaos correctness and TAG immediate draw must survive.
 
-Preserve the existing table feel, menus, responsive behavior, action bar, special-effect presentation, and canonical art unless the owner explicitly changes product direction.
+If a rule is unresolved, do not invent a default.
 
-## 9. Repository hygiene
+## 8. Whole-app domain discipline
+
+Before adding persistence or API endpoints, identify owning domain/lifecycle.
+
+Do not add a random table because one page needs data.
+
+Core logical domains:
+
+- Identity/Account;
+- Profile/Preferences;
+- Room/Persistent Group;
+- Prompt/Content;
+- Library/Group Memory;
+- Game;
+- History/Recap;
+- Safety/Moderation;
+- Media/Call;
+- Search/Notifications;
+- Admin/Operations.
+
+## 9. Control Room discipline
+
+Runtime-managed changes may use typed, authorized, audited Admin APIs only where explicitly designed.
+
+Source-controlled changes (rules, mechanics, schema, auth semantics, core UI/domain ownership) must go through controlled Git/PR/CI/staging approval.
+
+Never expose arbitrary production SQL/source editing as an admin convenience.
+
+See `docs/control-room.md`.
+
+## 10. Database rules
+
+Do not create a competing schema path.
+
+No shared DB apply/drop/reset/migration unless the active HANDOFF task explicitly authorizes the exact target/mutation.
+
+`DB-001` cannot freeze final schema until `APP-001`, `ARCH-GUARD-001` and `ADMIN-001` classify retained whole-product persistence needs.
+
+## 11. UI/UX rules
+
+The verified donor Web/Telegram presentation is reference authority unless explicitly superseded.
+
+Preserve table feel, menus, libraries, content surfaces, responsive behavior, action/safety bars, special-effect presentation and canonical art.
+
+Do not modernize/recreate for convenience.
+
+## 12. Repository hygiene
 
 Do not commit temporary:
 
-- `FIX.md`;
+- FIX files;
 - scratch plans;
 - recovery notes;
 - audit dumps;
 - controller state;
-- agent reasoning files.
+- agent reasoning.
 
-Permanent exceptions:
+Permanent docs such as HANDOFF/product-scope/control-room/decisions are allowed because they are project authority, not scratch.
 
-- `HANDOFF.md`;
-- this `AGENTS.md`;
-- owner-approved permanent docs.
+## 13. Required toolchain and gates
 
-## 10. Required toolchain and gates
-
-Use:
+Baseline:
 
 - Node 24.x
 - npm 10.9.2
 
-Before claiming a source candidate green, run the task-required focused tests and, when the roadmap calls for full verification:
+Before claiming a candidate green, run task-required focused checks and `npm run verify` when HANDOFF requires it.
 
-```sh
-npm run verify
-```
+Old CI is not proof for a new SHA.
 
-This covers typecheck, architecture check, tests, Web build, Telegram build, and API build according to the repository scripts.
+## 14. Branch/shared-state discipline
 
-Exact-state CI must correspond to the exact candidate SHA. Old green CI is not proof for a new commit.
-
-## 11. Branch and shared-state discipline
-
-Before every consequential repository mutation:
+Before consequential repo mutation:
 
 - re-read current branch HEAD;
-- confirm the target branch/PR;
-- inspect the exact files being changed;
-- do not assume another agent has not moved the branch.
+- verify target branch/PR;
+- inspect exact targets;
+- assume shared branches can move.
 
-Do not merge, rebase, reset, force-push, deploy, or mutate production merely to keep momentum. Those require explicit authorization for the exact action.
+Do not merge/rebase/reset/force-push/deploy/production-mutate merely for momentum.
 
-## 12. Task discipline
+## 15. Task discipline
 
-Every task has one ID from `HANDOFF.md`.
+Every task has one HANDOFF ID.
 
-For that task record privately or in the tool/controller state:
+Record:
 
 - task ID;
 - goal;
-- current branch;
-- start SHA;
-- rule/doc authority;
-- allowed targets;
-- forbidden targets;
+- current branch/start SHA;
+- authority/change intent;
+- allowed/forbidden targets;
 - prerequisites;
-- exact mutation;
-- focused tests;
-- full gates;
+- live facts;
+- mutation;
+- tests/gates;
 - result SHA;
-- CI/runtime evidence;
+- CI/runtime/deploy evidence;
+- affected Whole-App Transfer Matrix rows;
+- affected authority registry/decisions;
 - blocker/next task.
 
-Do not expand scope because a neighboring problem is visible.
+## 16. Mandatory Documentation Sync Gate
 
-## 13. HANDOFF update requirement
+A task is not complete until permanent execution documentation matches the exact result.
 
-At the end of every completed task:
+At minimum:
 
-1. update the task status in `HANDOFF.md`;
-2. add concise evidence to the Live Execution Ledger;
-3. record exact SHA/PR/CI/deployment identifiers that matter;
-4. record any unresolved blocker;
-5. move `NEXT TASK` only when the current task is proven PASS.
+1. update HANDOFF task status;
+2. append concise Live Execution Ledger evidence;
+3. record exact SHA/PR/CI/deployment identifiers required by the task;
+4. update affected Whole-App Transfer Matrix rows;
+5. update authority/decision records when ownership changed;
+6. record blockers;
+7. move NEXT TASK only after the current task is proven PASS.
 
-Do not rewrite the roadmap's end goal or owner decisions while performing a routine status update.
+Do not change product intent during a routine status update.
 
-## 14. Stop conditions
+## 17. Stop conditions
 
-Stop mutation and report the blocker when:
+Stop mutation when:
 
-- the current branch/head differs from the state the task was authorized against;
-- repository docs/rules/live behavior materially conflict and no precedence rule resolves it;
+- branch/head changed from authorized state;
+- rules/docs/live behavior conflict without precedence;
 - required external state cannot be verified;
-- a test failure is outside the authorized repair scope;
-- a rule is unresolved;
-- the requested mutation would create another authority path;
-- a migration/deployment target is ambiguous;
-- a production/shared-state change lacks explicit authorization.
+- failure lies outside repair scope;
+- rule is unresolved;
+- mutation would create another authority path;
+- DB/deploy target is ambiguous;
+- production/shared-state change lacks explicit authorization;
+- required change-intent scope is unclear.
 
-## 15. Definition of truthful reporting
+## 18. Truthful reporting
 
-Use evidence classes explicitly:
+Keep evidence classes separate:
 
 - source inspection;
 - focused unit test;
@@ -204,17 +241,18 @@ Use evidence classes explicitly:
 
 A source diff is not runtime proof. A build is not gameplay proof. Deployment success is not end-to-end proof.
 
-## 16. Resume protocol for a new agent
+## 19. Resume protocol
 
-A new agent with no chat history should be able to continue safely by doing only this:
+A new agent with no chat history must be able to:
 
-1. open repository;
-2. read `AGENTS.md`;
-3. read `HANDOFF.md`;
-4. verify live HEAD/PR/external dependencies for `NEXT TASK`;
-5. execute only that task;
-6. verify it;
-7. update `HANDOFF.md`;
-8. stop or proceed to the next task only when the roadmap gate permits it.
+1. open repo;
+2. read AGENTS;
+3. read HANDOFF;
+4. read product-scope;
+5. verify live state for NEXT TASK;
+6. execute only that task;
+7. verify it;
+8. pass Documentation Sync Gate;
+9. stop or advance only when the roadmap permits it.
 
-If those files are stale relative to live state, verify and update factual state first; do not guess from stale prose.
+If docs are stale relative to live state, verify and update factual status before making product assumptions.
