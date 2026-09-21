@@ -3459,6 +3459,8 @@ Agents append concise evidence rows. Do not turn this into a chat transcript.
 | 2026-09-20 | LIFE-001B | IN PROGRESS | Optional login-method source update in current candidate | Telegram-only and Web-only accounts are first-class; linking is optional; Telegram username is suggestion metadata only; username equality never auto-links. Hosted account UI/proof remains later work. `BASE-001` was the next task at that point. |
 | 2026-09-20/21 | BASE-001A | IN PROGRESS | DB classification complete; old staging data disposable; production DB empty; real Railway `staging` env `1d7bda4d...`; PostgreSQL 16 service `7b2586e8...` deployment `ed90401d...` SUCCESS; historical production-environment API still on `714d70c7...` | Production DB remained untouched. Next slice is canonical staging schema + current CLEAN staging API + frontend alignment/version proof. |
 | 2026-09-21 | DOC-REBASE-001 | PASS | Whole-product scope, Control Room architecture, live Documentation Sync Gate, authority guards and schema/domain roadmap introduced in current docs-only rebaseline | No gameplay rule/source, DB migration, Railway/Cloudflare, `main`, merge or production mutation belongs to this documentation task. |
+| 2026-09-21 | RULE-TURN / RULE-ACQUISITION | PASS | `gamerules.md` commit `2f0e8fe853321d81ad59defd8ba762f79c4c5712` | Owner locked voluntary normal draw as always available and turn-ending; initial 7-card opening deal may contain Special cards which stay in hand and do not auto-trigger. Separate special `DRAW` card-family turn-loss detail remains unresolved. |
+| 2026-09-21 | UI-RULE-SYNC | PASS | `packages/ui/src/game-table.ts` commit `3b1937676e77d758b4a356cfe9ca85640b20d5f3` | Focused contradiction audit found the donor QA knob defaulted voluntary draw off while CLEAN engine already permits draw with legal matches and advances turn. Active CLEAN presentation now shows the canonical rule as enabled/locked; donor evidence remains untouched. Audit also confirmed current CLEAN playable slice still rejects non-number `PLAY_CARD`, so owner-approved Special-card-from-hand legality is documented but not yet implemented. |
 
 ---
 
@@ -3468,7 +3470,7 @@ Keep these visible; do not silently choose defaults.
 
 Current known unresolved rules include items already recorded by the canonical rule registry, including but not limited to:
 
-- Draw turn-loss detail;
+- special `DRAW` card-family turn-loss detail;
 - Taboo timeout;
 - Hijack final-card boundary;
 - TAG nesting;
