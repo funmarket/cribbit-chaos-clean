@@ -1,7 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import { Pool } from 'pg';
 
-import { applyCanonicalMigrations } from '../packages/database/src/index.ts';
+import { applyCanonicalMigrations } from '../db/migrate.mjs';
 
 export async function withIsolatedP6Database(connectionString, run) {
   const schema = `canonical_test_${randomUUID().replaceAll('-', '')}`;
