@@ -298,7 +298,7 @@ test('Web view selection survives clean-client updates without remounting the sh
   assert.match(clientSource, /let webView: WebProductView = 'lobby';/);
   assert.equal((clientSource.match(/initialView: webView/g) || []).length, 1);
   assert.equal((clientSource.match(/mountWebPresentationController\(/g) || []).length, 1);
-  assert.match(clientSource, /setWebShellView\(root, webView\)/);
+  assert.doesNotMatch(clientSource, /setWebShellView\(root, webView\)/);
   assert.match(clientSource, /onViewChange: \(nextView\) => \{[\s\S]*webView = nextView;[\s\S]*updatePresentation\(\);[\s\S]*\}/);
   assert.match(clientSource, /window\.setInterval\(\(\) => \{ void refreshProjection\(\); \}, 1500\)/);
   assert.match(clientSource, /state\.projection\?\.revision === projection\.revision && state\.error === null/);
