@@ -90,12 +90,22 @@ test('P7A playable parity keeps old Web board, player strip and hand rail visibl
   assert.match(GAME_TABLE_STYLES, /\.tg-hand-rail\s*\{[^}]*overflow-x:\s*auto/);
 });
 
-test('P7A card faces render original CHAOS-133 image assets, not text-only placeholders', async () => {
+test('P7A Web and Telegram card faces keep their donor-specific canonical contracts', async () => {
   const { GAME_TABLE_STYLES } = await import('../packages/ui/src/styles.ts');
-  const html = renderGameTable(createFixturePreview().projection, createPresentationState());
+  const { renderWebProjectionCard } = await import('../packages/ui/src/web-card-presentation.ts');
+  const projection = createFixturePreview().projection;
+  const card = projection.currentPlayer.hand[0];
 
-  assert.match(html, /<img[^>]+class="game-card__art"[^>]+src="\/assets\/CHAOS-133-V1\/cards\//);
-  assert.match(html, /alt="[^"]+ card"/);
+  const webHtml = renderWebProjectionCard(card, true, true);
+  assert.match(webHtml, /class="game-card cc-has-canonical-face"/);
+  assert.match(webHtml, /<img class="cc-canonical-card-face" src="\/assets\/CHAOS-133-V1\/cards\//);
+  assert.match(webHtml, /data-card-id="c-lime-7"/);
+  assert.match(webHtml, /data-family="number"/);
+  assert.doesNotMatch(webHtml, /game-card__art/);
+
+  const telegramHtml = renderGameTable(projection, createPresentationState(), 'telegram');
+  assert.match(telegramHtml, /class="game-card__art"/);
+  assert.match(telegramHtml, /src="\/assets\/CHAOS-133-V1\/cards\//);
   assert.match(GAME_TABLE_STYLES, /\.game-card__art/);
   assert.match(GAME_TABLE_STYLES, /object-fit:contain/);
 });
