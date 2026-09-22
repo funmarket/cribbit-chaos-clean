@@ -103,7 +103,8 @@ test('P7A card faces render original CHAOS-133 image assets, not text-only place
 test('P7A setup and lobby screens inject shared CHAOS styles before rendering', async () => {
   const clientSource = await import('node:fs/promises').then(fs => fs.readFile(new URL('../packages/client-app/src/index.ts', import.meta.url), 'utf8'));
   assert.match(clientSource, /import \{[^}]*ensureCribbitStyles[^}]*renderCribbitHome[^}]*renderCribbitLobby/);
-  assert.match(clientSource, /function render\(\): void \{\s*ensureCribbitStyles\(\);/);
+  assert.match(clientSource, /ensureCribbitStyles\('web'\)/);
+  assert.match(clientSource, /function renderTelegram\(\): void \{\s*ensureCribbitStyles\('telegram'\);/);
 });
 
 test('P7A full extraction composes exact old UI source files and clean binding adapters', async () => {
@@ -263,16 +264,16 @@ test('Start simulated game uses the clean server API and the normal command hand
   const clientSource = await fs.readFile(new URL('../packages/client-app/src/index.ts', import.meta.url), 'utf8');
 
   assert.match(clientSource, /api\.createSimulation\(\)/);
-  assert.match(clientSource, /const bindSimulationControls = \(\): void =>/);
-  assert.match(clientSource, /querySelectorAll<HTMLButtonElement>\('\[data-action="demo-game"\]'\)/);
+  assert.match(clientSource, /function bindWebCommands\(\): \(\) => void/);
+  assert.match(clientSource, /action === 'demo-game'[\s\S]*startSimulation\(\)/);
+  assert.match(clientSource, /action === 'start-game'[\s\S]*startGame\(\)/);
   assert.doesNotMatch(clientSource, /simulationProjection|createFixturePreview\(\)\.projection/);
-  assert.doesNotMatch(clientSource, /querySelector<HTMLButtonElement>\('#startGameButton'\)\?\.addEventListener/);
-  assert.match(clientSource, /querySelector<HTMLButtonElement>\('\[data-action="start-game"\]'\)\?\.addEventListener\('click', startGame\)/);
-  assert.match(clientSource, /mountGameTable\(target, state\.projection, \{ onDraw: drawCard, onPlay: playCard \}, platform\.kind\)/);
+  assert.match(clientSource, /mountGameTable\(target, state\.projection, \{ onDraw: drawCard, onPlay: playCard \}, 'telegram'\)/);
+  assert.match(clientSource, /updateWebPresentation\(root,/);
   assert.doesNotMatch(clientSource, /legacy-runtime|canonical-game-runtime|@cribbit\/game-engine/);
 });
 
-test('Web view selection survives clean-client rerenders instead of snapping back to Lobby', async () => {
+test('Web view selection survives clean-client updates without remounting the shell', async () => {
   const fs = await import('node:fs/promises');
   const [clientSource, controllerSource] = await Promise.all([
     fs.readFile(new URL('../packages/client-app/src/index.ts', import.meta.url), 'utf8'),
@@ -285,8 +286,10 @@ test('Web view selection survives clean-client rerenders instead of snapping bac
   assert.match(controllerSource, /showView\(state\.view\);/);
 
   assert.match(clientSource, /let webView: WebProductView = 'lobby';/);
-  assert.equal((clientSource.match(/initialView: webView/g) || []).length, 2);
-  assert.equal((clientSource.match(/onViewChange: \(nextView\) => \{ webView = nextView; \}/g) || []).length, 2);
+  assert.equal((clientSource.match(/initialView: webView/g) || []).length, 1);
+  assert.equal((clientSource.match(/mountWebPresentationController\(/g) || []).length, 1);
+  assert.match(clientSource, /setWebShellView\(root, webView\)/);
+  assert.match(clientSource, /onViewChange: \(nextView\) => \{[\s\S]*webView = nextView;[\s\S]*updatePresentation\(\);[\s\S]*\}/);
   assert.match(clientSource, /window\.setInterval\(\(\) => \{ void refreshProjection\(\); \}, 1500\)/);
   assert.match(clientSource, /state\.projection\?\.revision === projection\.revision && state\.error === null/);
 });
