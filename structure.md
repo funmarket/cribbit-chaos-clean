@@ -1,48 +1,246 @@
-# Structure and authority
+# Cribbit CHAOS CLEAN - Structure and Authority
 
-## Phase gates
+This document describes the target architecture and domain ownership. It supersedes the old P1-placeholder description.
 
-P0A PASSED: immutable source, rule provenance/IDs, command domains, concurrent participant model, canonical inventory, approved Lime 1 mapping and architecture ownership. P0B ACTIVE / PARTIAL: visual references and approval. P1 AUTHORIZED: foundation only. Missing visual evidence does not block P1.
+See:
 
-P12 Roulette UI extraction is blocked on its visual gate. P13 board/card/UI migration is blocked on corresponding P0B visual approval. P15 final Telegram visual integration is blocked where real Telegram evidence is required. No engine rules or API gameplay mutations may be implemented under P1.
+- `docs/product-scope.md` for whole-product scope/source hierarchy/preservation;
+- `docs/control-room.md` for Admin/Control Room;
+- `gamerules.md` for gameplay semantics;
+- `HANDOFF.md` for current execution state.
 
-## Production roots
+## 1. One application, multiple presentation/operations adapters
 
-`apps/web/index.html` → `apps/web/src/main.ts` → `@cribbit/client-app` bootstrap with Web adapter.
+```text
+                         CRIBBIT CHAOS
+                              |
+       +----------------------+----------------------+
+       |                      |                      |
+ Web presentation      Telegram presentation    Control Room
+       |                      |                      |
+       +----------+-----------+----------+-----------+
+                  |                      |
+           packages/api-client      Admin/change APIs
+                  |                      |
+                  +----------+-----------+
+                             |
+                         Railway API
+                             |
+                 shared application domains
+                             |
+                 +-----------+-----------+
+                 |                       |
+             game-engine             persistence
+                                             |
+                                         PostgreSQL
+```
 
-`apps/telegram/index.html` → `apps/telegram/src/main.ts` → the same bootstrap with Telegram adapter.
+Control Room is privileged presentation/operations over the same domains. It is not another backend/game engine.
 
-Exactly one entry per access surface, zero frontend gameplay authorities. Shared bootstrap only marks/disposes its mount; it creates no sessions. Repeated mounting of the same root fails. Platform adapters currently identify surface only: SDK/auth/back/theme integrations are not claimed.
+## 2. Logical domain ownership
 
-`apps/api/src/main.ts` is empty. Future API service will own authentication, membership, command receipt/revision, engine invocation, transaction and authorized publication. Pure engine will own game rules; neither API handlers nor UI implement duplicate rules. One active root flow can accept concurrent authorized participant actions; FIFO forced consequences do not impose a voter order.
+### Identity / Account
 
-## Package boundaries
+Owns canonical users, provider identities, credentials/sessions, Telegram validation and secure account linking/unlinking.
 
-| Package | Public surface | Allowed internal dependencies | Forbidden responsibility |
-|---|---|---|---|
-| contracts | root, empty P1 placeholder | none | I/O, engine implementation or duplicate schemas |
-| cards | presentation and server subpaths, empty P1 placeholders | contracts | Client-executable deck constructor |
-| prompts | server subpath, empty | contracts | Client prompt selection; DB I/O in pure policy |
-| game-engine | root, empty | contracts, cards, prompts | DOM, SDK, DB/socket I/O |
-| api-client | root, empty | contracts | Gameplay transitions |
-| platform | /types, /web, /telegram; no root export | contracts | Cross-surface concrete adapters; game rules, API mutation authority |
-| ui | root, empty | contracts, cards/presentation | DB, engine, prompt selection |
-| client-app | bootstrap | contracts, api-client, ui, platform/types (type-only) | Authoritative state reducer or fallback game |
+### Profile / Preferences
 
-`tools/architecture/policy.mjs` encodes package edges. `check.mjs` resolves TypeScript imports, re-exports, aliases and literal dynamic imports; unresolved/computed loading fails. Server source is empty by an explicit P1 scope guard. Client card-server imports are forbidden even though cards/presentation is allowed. Type-only server edges are also rejected to avoid growing accidental coupling.
+Owns display/profile data, personal content preference/ceiling and user-level preferences that follow the canonical user across clients.
 
-HTML uses an exact positive P1 shell grammar (whitespace normalized), not a blacklist of suspicious strings. Any new shell element/script/handler requires reviewed guard changes. The source graph scans orphan source files too; Vite's actual resolved build graph and emitted chunk metadata are inspected independently, including tree-shaken imports. Exactly one emitted entry is required per frontend.
+### Room / Persistent Group Context
 
-P1 capability restrictions reject dynamic script/worker execution, direct fetch and storage in client code. Future API-client transport capabilities must be introduced deliberately in their owner package with negative tests. Do not disable guard rules globally when later work needs a narrowly scoped capability.
+Owns room/join code, host/roles/membership, lobby/readiness, retained room/group context, room configuration, content eligibility and active/latest game reference.
 
-Static guards enforce module/capability boundaries and known mutation patterns. They cannot prove that arbitrary renamed arithmetic is not game logic. Required review and future backend/API/runtime tests remain necessary. CI workflow must become a required branch check when a GitHub repository is available; a workflow file alone does not establish branch protection.
+Does not mutate hands/turns/effects/winner.
 
-## Final P1 hardening
+### Prompt / Content
 
-PlatformAdapter lives in packages/platform/src/types.ts. Only type/interface declarations are allowed there. Concrete adapters live separately in web.ts and telegram.ts. Explicit package exports and TypeScript aliases are @cribbit/platform/types, /web and /telegram; there is no platform root export. Web may reach only its Web adapter and shared types; Telegram may reach only its Telegram adapter and shared types. Shared client-app may import only the PlatformAdapter type, never either constructor. These constraints apply to relative imports, re-exports, dynamic imports and type-only dependencies, including import-type expressions. Real production bundle checks independently reject the other surface's adapter.
+Owns Cribbit Originals, Community CHAOS, custom prompts, provenance, categories/tags/world/intensity/player bounds, authorship/reveal metadata, moderation, flags and prompt eligibility inputs.
 
-Every cross-workspace source edge must resolve, name a declared production dependency and satisfy the architecture policy. dependencies, peerDependencies or optionalDependencies can satisfy a production edge; devDependencies alone cannot, even for a type-only source import. All four manifest dependency sections are checked for forbidden internal declarations, including unused declarations. Unknown @cribbit workspace names are rejected. Allowed but currently unused dependencies are not required to manufacture source imports. Source reports record the resolved edge, declaring section and policy result.
+The engine receives authoritative eligible prompt results; it does not query PostgreSQL.
 
-Do not globally relax capability restrictions. Future API transport, browser events and Telegram SDK integrations require narrowly designated owner modules and adversarial tests proving the exception cannot escape those modules. No capability exception is added by P1 hardening.
+### Library / Group Memory
 
-Before any real API implementation begins, replace the API placeholder transpile build with a real server module/build dependency audit. That audit must inspect resolved server imports and production output/dependencies, enforce server ownership boundaries and have negative tests for violations. The current isolated transpile is evidence only that an empty placeholder builds; it must never be reused as evidence for an implemented backend.
+Owns distinct durable concepts:
+
+- My Saved Deck;
+- House Deck;
+- Live Room Pool linkage;
+- Resolved Moments;
+- Save That outcomes;
+- durable group/room memory where retained.
+
+Ownership/lifecycle must be explicit.
+
+### Game
+
+Owns game players/seats, canonical CHAOS-133-V1 state, command idempotency, revision, legal transitions, effects/continuations, deadlines and winner boundary.
+
+The pure engine owns gameplay semantics. API handlers orchestrate authorization/transactions but do not duplicate rules.
+
+### History / Recap
+
+Owns durable completed-session history/projections such as recap, resolved moments and Save That references.
+
+### Safety / Moderation
+
+Owns/report-cross-cuts personal safety policy, flags, moderation state and rule-backed game capabilities without duplicating game rules.
+
+### Media / Call presentation
+
+Owns explicit media metadata/object-storage authorization and capture/playback adaptation. Passive calls/audio are never canonical game input.
+
+### Search / Notifications
+
+When retained/durable, these are application projections/events over canonical data.
+
+### Admin / Operations
+
+Owns:
+
+- admin RBAC/capabilities;
+- audit records;
+- moderation operations;
+- diagnostics/version/environment views;
+- typed runtime configuration;
+- controlled change proposals/approvals.
+
+Source-controlled behavior remains Git/CI/staging governed.
+
+## 3. Package responsibility
+
+Target dependency direction:
+
+```text
+contracts
+   ^
+   +---- cards
+   +---- prompts/policy
+   +---- game-engine <----- cards, prompt policy inputs
+   +---- api-client
+   +---- ui/presentation
+   +---- platform/types
+
+api ----> contracts, domain services, game-engine, database
+database ----> persistence adapters/types required by domains
+shared client composition ----> contracts, api-client, ui, platform/types
+web ------> shared client composition + Web adapter
+telegram -> shared client composition + Telegram adapter
+admin ----> shared contracts/api client/admin APIs (no rule engine)
+```
+
+Forbidden ownership:
+
+- `game-engine -> database/api/ui/browser/Telegram SDK`;
+- frontend/Admin code implementing canonical game transitions;
+- direct client/Admin DB access;
+- separate Web/Telegram/Admin domain stores;
+- client prompt-selection authority;
+- simulation-specific rule reducers;
+- duplicate persistence models.
+
+## 4. Persistence principle
+
+One canonical PostgreSQL authority per environment.
+
+Before schema freeze classify at minimum:
+
+- identity/auth;
+- profiles/preferences;
+- rooms/memberships/configuration/group context;
+- game sessions/players/commands/events/deadlines/outbox as needed;
+- prompts/content/moderation;
+- saved prompts;
+- House/group ownership;
+- Live Room Pool;
+- prompt flags;
+- explicit answers/completions;
+- recaps/resolved moments/history;
+- media metadata where retained;
+- admin roles/capabilities;
+- audit events;
+- runtime configuration/change-proposal metadata where actually required.
+
+Exact table names belong to `DB-001` after `APP-001`, `ARCH-GUARD-001` and `ADMIN-001` classify ownership.
+
+## 5. Presentation principle
+
+The evolved donor app is the primary UI/UX reference unless explicitly superseded.
+
+CLEAN presentation extracts/reuses proven donor design and wires it to clean domains instead of inventing a new theme.
+
+## 6. Simulation principle
+
+```text
+Web QA UI --------\
+                   -> shared scenario harness -> SAME game-engine/contracts
+Telegram QA UI ---/
+```
+
+Simulation may create deterministic test state but never reimplement mechanics.
+
+## 7. Single-authority change structure
+
+Every significant product concept has one owner recorded by the Product Authority Registry.
+
+Planned guard tooling:
+
+- `ARCH-GUARD-001` Product Authority Registry;
+- `ARCH-GUARD-002` Change Intent / Impact Checker;
+- `ARCH-GUARD-003` Diff Ownership Enforcement;
+- `ARCH-GUARD-004` Rule Impact Registry;
+- `ARCH-GUARD-005` Duplicate Authority Detection.
+
+Change flow:
+
+```text
+rule/domain authority
+      -> canonical implementation
+      -> API projection/contract
+      -> api-client
+      -> Web / Telegram / Admin presentation
+      -> shared QA scenarios
+```
+
+Never independently implement the same semantic change in several runtime locations.
+
+## 8. Control Room change boundary
+
+Runtime-managed content/config can use typed Admin APIs with RBAC/audit.
+
+Source-controlled behavior uses:
+
+```text
+Change Intent
+ -> Authority Registry
+ -> Impact Checker
+ -> branch/patch
+ -> tests
+ -> PR
+ -> CI
+ -> staging
+ -> approval
+ -> production
+```
+
+No arbitrary source/SQL production editor.
+
+## 9. Operational environments
+
+```text
+Web staging --------\
+Telegram staging ----> ONE staging API -> ONE staging PostgreSQL
+Admin staging -------/
+
+Web production -------\
+Telegram production ---> ONE production API -> ONE production PostgreSQL
+Admin production -----/
+```
+
+Exact deployed facts are governed by fresh Railway/Cloudflare/GitHub verification and HANDOFF.
+
+## 10. Donor preservation
+
+Donor modules, old migrations, historical DB/deployment evidence and prompt/content assets remain archaeology until the Whole-App Transfer Matrix proves transfer or obsolescence.
+
+"Legacy" means "not final runtime authority"; it does not mean "safe to delete."

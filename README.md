@@ -1,44 +1,70 @@
-# Cribbit CHAOS — clean rebuild
+# Cribbit CHAOS CLEAN
 
-Same Cribbit table. Server owns the game.
+Cribbit CHAOS CLEAN is the clean rebuild of the existing Cribbit CHAOS product.
 
-`gamerules.md` is rule authority. The old app is UI/UX reference only.
+> **Same game, same verified product experience, cleaner authority and wiring underneath.**
 
-## Play the core loop locally
+This is not a new game and not a board-only rewrite.
 
-Requires Node 24+ and npm 10.9.2.
+## Whole-product scope
+
+Cribbit includes, where retained/verified:
+
+- the CHAOS-133-V1 shedding-card game;
+- Web and Telegram over the same backend/domains;
+- canonical accounts, profiles, rooms and persistent group context;
+- Tonight's CHAOS;
+- CHAOS Board;
+- My Saved Deck, House Deck and Live Room Pool;
+- player-created prompts, authorship, moderation and flags;
+- explicit Call Mode answer flows;
+- safety/consent controls;
+- Recap, Save That, Resolved Moments and group history/memory;
+- a Control Room for safe administration/operations/change proposals;
+- Local QA Simulation/Rules Lab over the same canonical engine.
+
+Read first:
+
+- `HANDOFF.md` - live execution roadmap/status/evidence;
+- `AGENTS.md` - mandatory engineering execution contract;
+- `docs/product-scope.md` - whole-product scope/source hierarchy/preservation/change authority;
+- `docs/control-room.md` - Admin/Control Room architecture;
+- `gamerules.md` - canonical gameplay-rule authority.
+
+## Architecture
+
+```text
+Web ------------------\
+                       -> packages/api-client -> Railway Node API -> shared domains/game-engine -> PostgreSQL
+Telegram -------------/
+                                  ^
+                                  |
+                         Control Room / Admin
+                     (same domains + audited APIs)
+```
+
+There is one canonical account/room/content/game/history authority. Web, Telegram and Admin are presentation/operations adapters, not separate products or engines.
+
+## Local verification
+
+Required baseline:
+
+- Node 24.x
+- npm 10.9.2
 
 ```sh
 npm ci
-npm run dev
-```
-
-- API (in-memory, no Postgres): http://127.0.0.1:3000
-- Web table: http://127.0.0.1:5173
-
-1. Create a session in one tab.
-2. Join with the session id in a second tab.
-3. Host starts the game.
-4. Draw and play mutate server state. The other tab polls the projection.
-
-Postgres remains optional. Set `DATABASE_URL` only when you want the durable path.
-
-```sh
 npm run verify
 ```
 
-## What this slice is
+Use `npm run dev` for the current local development surface.
 
-- CHAOS-133-V1 deck (133 physical cards)
-- 7-card deal
-- Server commands: `CREATE_SESSION`, `JOIN_SESSION`, `START_GAME`, `DRAW_CARD`, `PLAY_CARD`
-- Number / Skip / Reverse / Draw / Wild table cards
-- Forced-on-draw social families leave the hand and become `ACTIVE_EFFECT_PENDING`
-- UI renders `GameView` only
+Local QA Simulation is a testing surface only. It must not become a second game engine or persistence model.
 
-## What this slice is not
+## Change-authority rule
 
-- Full social-card resolution
-- New product UX
-- Client-owned rules
-- Extra infra required to play the loop
+A product concept has one authoritative owner. Frontends/Admin consume or orchestrate that authority; they do not duplicate it.
+
+Significant changes must declare impact and follow the Product Authority / Change Intent guards in the roadmap.
+
+Do not delete donor behavior/data/schema/deployment evidence merely because CLEAN does not yet use it. First map it to its CLEAN replacement or explicitly classify it obsolete.

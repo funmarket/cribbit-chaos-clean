@@ -1,0 +1,130 @@
+[
+  {
+    "path": "packages/ui/src/template.html",
+    "stored_as": "packages/ui/src/template.html",
+    "sha256": "a352c062938cec358a09a9628512d6f0aa1162ec9e8aa874ad7e5614ee72361a",
+    "bytes": 62315,
+    "status": "copied-verbatim-ui-source",
+    "source": "funmarket/cribbit-chaos@95febd07e4d739c96843fcc4a02f070eb3c623c0"
+  },
+  {
+    "path": "packages/ui/src/styles.css",
+    "stored_as": "packages/ui/src/styles.css",
+    "sha256": "629c345062ab87c414002c7beb99aacdfac5753fb1f8a3388866c54e35e06e6c",
+    "bytes": 119997,
+    "status": "copied-verbatim-ui-source",
+    "source": "funmarket/cribbit-chaos@95febd07e4d739c96843fcc4a02f070eb3c623c0"
+  },
+  {
+    "path": "packages/ui/src/compact-cards.css",
+    "stored_as": "packages/ui/src/compact-cards.css",
+    "sha256": "f9ac3aa01f9cf1d09bcb52580bf7113172a1bc02a8303332f03ddc8c67d3b4d5",
+    "bytes": 718,
+    "status": "copied-verbatim-ui-source",
+    "source": "funmarket/cribbit-chaos@95febd07e4d739c96843fcc4a02f070eb3c623c0"
+  },
+  {
+    "path": "packages/ui/src/draw-pile-card-back.css",
+    "stored_as": "packages/ui/src/draw-pile-card-back.css",
+    "sha256": "a76fc6096161cbd57ad171307a72dedfc8dbaf48c4b71fe688ede8a958306a2a",
+    "bytes": 1430,
+    "status": "copied-verbatim-ui-source",
+    "source": "funmarket/cribbit-chaos@95febd07e4d739c96843fcc4a02f070eb3c623c0"
+  },
+  {
+    "path": "apps/web/src/web-game.css",
+    "stored_as": "apps/web/src/web-game.css",
+    "sha256": "ffbee331c196872f5fa759344f924bbbb01ff9b538901306caa7946990b56d8d",
+    "bytes": 15947,
+    "status": "copied-verbatim-ui-source",
+    "source": "funmarket/cribbit-chaos@95febd07e4d739c96843fcc4a02f070eb3c623c0"
+  },
+  {
+    "path": "apps/web/src/web-compact.css",
+    "stored_as": "apps/web/src/web-compact.css",
+    "sha256": "248ff36deae03fcc0b80962fd3f148cc3461be1831807f1b2a1e4f07ed3d096e",
+    "bytes": 11232,
+    "status": "copied-verbatim-ui-source",
+    "source": "funmarket/cribbit-chaos@95febd07e4d739c96843fcc4a02f070eb3c623c0"
+  },
+  {
+    "path": "apps/web/src/canonical-hero-cards.css",
+    "stored_as": "apps/web/src/canonical-hero-cards.css",
+    "sha256": "fb4cc0a2267e3f9dd050526d550025b836872a5f2fb07741607ca012cf7283a4",
+    "bytes": 1340,
+    "status": "copied-verbatim-ui-source",
+    "source": "funmarket/cribbit-chaos@95febd07e4d739c96843fcc4a02f070eb3c623c0"
+  },
+  {
+    "path": "apps/web/src/canonical-board-cards.css",
+    "stored_as": "apps/web/src/canonical-board-cards.css",
+    "sha256": "7d093573faa76933ca99e69685b4012014b486505109a8ea2586fc09bbdb1a59",
+    "bytes": 967,
+    "status": "copied-verbatim-ui-source",
+    "source": "funmarket/cribbit-chaos@95febd07e4d739c96843fcc4a02f070eb3c623c0"
+  },
+  {
+    "path": "apps/web/src/main.ts",
+    "stored_as": "apps/web/src/main.ts.source.txt",
+    "sha256": "d2482a8500c7d4e5c637ce07faa0418e7f5b3ceb6e4744880098e488be78da7b",
+    "bytes": 12427,
+    "status": "copied-verbatim-inert-reference",
+    "source": "funmarket/cribbit-chaos@95febd07e4d739c96843fcc4a02f070eb3c623c0"
+  },
+  {
+    "path": "apps/telegram/src/bootstrapTelegram.ts",
+    "stored_as": "apps/telegram/src/bootstrapTelegram.ts.source.txt",
+    "sha256": "2c4c0e5b0663ecdf7bbeb3ff02e8a87b9b3aa63a76880f2e3f8450564e83f57a",
+    "bytes": 20927,
+    "status": "copied-verbatim-inert-reference",
+    "source": "funmarket/cribbit-chaos@95febd07e4d739c96843fcc4a02f070eb3c623c0"
+  },
+  {
+    "path": "apps/telegram/src/gameView.ts",
+    "stored_as": "apps/telegram/src/gameView.ts.source.txt",
+    "sha256": "af17dfee39b895978a46a2eedc59b6ea787122c70f59d784762ac019768776be",
+    "bytes": 19132,
+    "status": "copied-verbatim-inert-reference",
+    "source": "funmarket/cribbit-chaos@95febd07e4d739c96843fcc4a02f070eb3c623c0"
+  },
+  {
+    "path": "apps/telegram/src/styles/telegram.css",
+    "stored_as": "apps/telegram/src/styles/telegram.css",
+    "sha256": "d135d308c4f60ab5a379097e43db5c0aa2ee3d14b5fd984b92f7478def1a58af",
+    "bytes": 12987,
+    "status": "copied-verbatim-ui-source",
+    "source": "funmarket/cribbit-chaos@95febd07e4d739c96843fcc4a02f070eb3c623c0"
+  },
+  {
+    "path": "apps/telegram/src/styles/game.css",
+    "stored_as": "apps/telegram/src/styles/game.css",
+    "sha256": "bd273cec4e7aebafe839655929be5f24fa1dc1d6637a4c9f3b47743c9781f5be",
+    "bytes": 10395,
+    "status": "copied-verbatim-ui-source",
+    "source": "funmarket/cribbit-chaos@95febd07e4d739c96843fcc4a02f070eb3c623c0"
+  },
+  {
+    "path": "apps/telegram/src/styles/cards.css",
+    "stored_as": "apps/telegram/src/styles/cards.css",
+    "sha256": "2b46eceaecadc0498f3cbcd9c8b4452f92fa0f8a7db6dfce9f3cb645e3e7ab18",
+    "bytes": 2413,
+    "status": "copied-verbatim-ui-source",
+    "source": "funmarket/cribbit-chaos@95febd07e4d739c96843fcc4a02f070eb3c623c0"
+  },
+  {
+    "path": "apps/telegram/src/styles/contextual.css",
+    "stored_as": "apps/telegram/src/styles/contextual.css",
+    "sha256": "cf9589fd37cf96dfd61d506f3b04bdc4aae6944247918e84c6cbe5d94f7ee424",
+    "bytes": 5280,
+    "status": "copied-verbatim-ui-source",
+    "source": "funmarket/cribbit-chaos@95febd07e4d739c96843fcc4a02f070eb3c623c0"
+  },
+  {
+    "path": "apps/telegram/src/styles/hardening.css",
+    "stored_as": "apps/telegram/src/styles/hardening.css",
+    "sha256": "790a7d38c34ec03948131b26da586d84991275c9333b5955ca09cba131c08b8c",
+    "bytes": 2944,
+    "status": "copied-verbatim-ui-source",
+    "source": "funmarket/cribbit-chaos@95febd07e4d739c96843fcc4a02f070eb3c623c0"
+  }
+]
