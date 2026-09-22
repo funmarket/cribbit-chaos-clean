@@ -20,10 +20,11 @@ test('Phase 4 Web runtime uses one-time donor DOM setup instead of the string-tr
   assert.equal(shellSource.includes('hydrateWebTemplate('), false);
   assert.equal(shellSource.includes("from './game-table.ts'"), false);
 
-  const webStart = clientSource.indexOf("if (platform.kind === 'web') {");
-  const webEnd = clientSource.indexOf('  } else {', webStart);
-  assert.notEqual(webStart, -1, 'Web bootstrap block must exist');
-  assert.notEqual(webEnd, -1, 'Web bootstrap block must terminate');
+  const webBootstrapAnchor = "  if (platform.kind === 'web') {\n    ensureCribbitStyles('web');\n    unmountWebShell = mountWebShell(root);";
+  const webStart = clientSource.indexOf(webBootstrapAnchor);
+  const webEnd = clientSource.indexOf("\n  } else {\n    renderTelegram();", webStart);
+  assert.notEqual(webStart, -1, 'Actual Web bootstrap block must exist');
+  assert.notEqual(webEnd, -1, 'Actual Web bootstrap block must terminate');
   const webBootstrap = clientSource.slice(webStart, webEnd);
 
   for (const forbidden of ['renderCribbitHome(', 'renderCribbitLobby(', 'mountGameTable(', 'activateWebView(', 'applyOldWebMainPresentation(', 'hydrateWebTemplate(']) {
