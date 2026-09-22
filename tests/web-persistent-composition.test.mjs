@@ -30,7 +30,7 @@ test('Phase 2 Web composition mounts the shell once and updates presentation wit
     client,
     /const setState = (next: Partial<AppState>): void => {s*state = { ...state, ...next };s*updatePresentation();s*};/,
   );
-  assert.equal((client.match(/mountWebPresentationController(/g) || []).length, 1);
+  assert.equal((client.match(/mountWebPresentationController\(/g) || []).length, 1);
 
   assert.equal((webShell.match(/root.innerHTMLs*=/g) || []).length, 1, 'Web shell may be mounted once');
   assert.doesNotMatch(webBinding, /root.innerHTMLs*=|replaceChildren(/);
