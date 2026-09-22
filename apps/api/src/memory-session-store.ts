@@ -45,6 +45,44 @@ export function createMemorySessionStore() {
       return { sessionId: input.sessionId, playerId: input.playerId, projection: projectGameView(state, input.playerId) };
     },
 
+    async createSimulationSession(input: {
+      readonly sessionId: string;
+      readonly principalId: string;
+      readonly playerId: string;
+      readonly displayName: string;
+      readonly botDisplayNames: readonly string[];
+      readonly shuffledDeck: readonly string[];
+    }): Promise<CreatedSessionRecord> {
+      let state = createWaitingGameState({
+        sessionId: input.sessionId,
+        hostPlayerId: input.playerId,
+        hostDisplayName: input.displayName
+      });
+      for (const [index, displayName] of input.botDisplayNames.entries()) {
+        const added = addWaitingPlayer({
+          state,
+          playerId: `p${index + 2}`,
+          displayName
+        });
+        if (added.status === 'rejected') throw new Error(added.reason);
+        state = added.state;
+      }
+      const started = startPlayableGame({ state, shuffledDeck: input.shuffledDeck });
+      if (started.status === 'rejected') throw new Error(started.reason);
+      state = started.state;
+      validateCanonicalState(state);
+      sessions.set(input.sessionId, {
+        state,
+        members: [{ principalId: input.principalId, playerId: input.playerId, displayName: input.displayName }],
+        receipts: new Map()
+      });
+      return {
+        sessionId: input.sessionId,
+        playerId: input.playerId,
+        projection: projectGameView(state, input.playerId)
+      };
+    },
+
     async joinSession(input: { readonly sessionId: string; readonly principalId: string; readonly playerId: string; readonly displayName: string }): Promise<SessionStoreResult<CreatedSessionRecord>> {
       const session = sessions.get(input.sessionId);
       if (!session) return { status: 'rejected', reason: 'SESSION_NOT_FOUND' };

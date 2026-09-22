@@ -7,6 +7,7 @@ import { createIdentityStore, createPostgresCommandTransactionPort, createPostgr
 import { createGameCommandService } from './command-service.ts';
 import { createMemoryIdentityStore } from './memory-identity-store.ts';
 import { createMemoryCommandTransactionPort, createMemorySessionStore } from './memory-session-store.ts';
+import { advanceSimulationBots } from './simulation-service.ts';
 import {
   AuthContextError,
   clearSessionCookie,
@@ -72,6 +73,22 @@ function shuffledDeck(): readonly string[] {
     [deck[index], deck[target]] = [deck[target], deck[index]];
   }
   return deck;
+}
+
+function simulationDeck(): readonly string[] {
+  const deck = [...canonicalDeckInstanceIds()];
+  const humanPlayableCard = 'number_lime_2_01';
+  const openingDiscard = 'number_lime_1_01';
+  if (!deck.includes(humanPlayableCard) || !deck.includes(openingDiscard)) {
+    throw new Error('SIMULATION_DECK_FIXTURE_UNAVAILABLE');
+  }
+  const remaining = deck.filter((cardId) => cardId !== humanPlayableCard && cardId !== openingDiscard);
+  return [
+    humanPlayableCard,
+    ...remaining.slice(0, 27),
+    openingDiscard,
+    ...remaining.slice(27)
+  ];
 }
 
 function sessionRoute(pathname: string): { sessionId: string; action: 'join' | 'projection' | 'start' | 'commands' } | null {
@@ -272,6 +289,26 @@ export function createNodeApiHandler({
         return;
       }
 
+      if (request.method === 'POST' && pathname === '/api/simulations') {
+        const context = await requireUser();
+        const sessionId = `sim-${randomUUID().replaceAll('-', '').slice(0, 8)}`;
+        const playerId = 'p1';
+        const displayName = context.user.displayName;
+        const created = await sessionStore().createSimulationSession({
+          sessionId,
+          principalId: context.userId,
+          playerId,
+          displayName,
+          botDisplayNames: ['Maya', 'Rami', 'Lina'],
+          shuffledDeck: simulationDeck()
+        });
+        sendJson(response, 201, {
+          player: { sessionId, playerId, displayName },
+          projection: created.projection
+        });
+        return;
+      }
+
       const route = sessionRoute(pathname);
       if (route && request.method === 'POST' && route.action === 'join') {
         const context = await requireUser();
@@ -332,7 +369,21 @@ export function createNodeApiHandler({
           }
         });
         if (result.status === 'accepted') {
-          sendJson(response, 200, { ok: true, receipt: { commandId: result.receipt.commandId, acceptedRevision: result.receipt.acceptedRevision }, projection: result.projection });
+          const projection = route.sessionId.startsWith('sim-')
+            ? await advanceSimulationBots({
+                transactions: transactions(),
+                sessionId: route.sessionId,
+                humanPlayerId: result.receipt.actorPlayerId
+              })
+            : result.projection;
+          sendJson(response, 200, {
+            ok: true,
+            receipt: {
+              commandId: result.receipt.commandId,
+              acceptedRevision: result.receipt.acceptedRevision
+            },
+            projection
+          });
           return;
         }
         sendJson(response, result.code === 'STALE_REVISION' ? 409 : 400, { ok: false, code: result.code, reason: result.reason, currentRevision: result.currentRevision });

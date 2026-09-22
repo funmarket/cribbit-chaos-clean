@@ -258,18 +258,17 @@ test('Web room creation CTA preserves the old anchor and is wired to the setup s
   assert.match(clientSource, /scrollIntoView\(\{ block: 'start', behavior: 'smooth' \}\)/);
 });
 
-test('Start simulated game uses the clean fixture preview instead of creating a server session', async () => {
+test('Start simulated game uses the clean server API and the normal command handlers', async () => {
   const fs = await import('node:fs/promises');
   const clientSource = await fs.readFile(new URL('../packages/client-app/src/index.ts', import.meta.url), 'utf8');
 
-  assert.match(clientSource, /let simulationProjection: GameViewProjection \| null = null;/);
-  assert.match(clientSource, /simulationProjection = createFixturePreview\(\)\.projection;/);
+  assert.match(clientSource, /api\.createSimulation\(\)/);
   assert.match(clientSource, /const bindSimulationControls = \(\): void =>/);
   assert.match(clientSource, /querySelectorAll<HTMLButtonElement>\('\[data-action="demo-game"\]'\)/);
+  assert.doesNotMatch(clientSource, /simulationProjection|createFixturePreview\(\)\.projection/);
   assert.doesNotMatch(clientSource, /querySelector<HTMLButtonElement>\('#startGameButton'\)\?\.addEventListener/);
   assert.match(clientSource, /querySelector<HTMLButtonElement>\('\[data-action="start-game"\]'\)\?\.addEventListener\('click', startGame\)/);
-  assert.match(clientSource, /startSimulation\(\);/);
-  assert.match(clientSource, /mountGameTable\(target, simulationProjection, \{\}, platform\.kind\)/);
+  assert.match(clientSource, /mountGameTable\(target, state\.projection, \{ onDraw: drawCard, onPlay: playCard \}, platform\.kind\)/);
   assert.doesNotMatch(clientSource, /legacy-runtime|canonical-game-runtime|@cribbit\/game-engine/);
 });
 

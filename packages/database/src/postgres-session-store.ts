@@ -88,6 +88,55 @@ export function createPostgresSessionStore(pool: Pool) {
       } finally { client.release(); }
     },
 
+    async createSimulationSession(input: {
+      readonly sessionId: string;
+      readonly principalId: string;
+      readonly playerId: string;
+      readonly displayName: string;
+      readonly botDisplayNames: readonly string[];
+      readonly shuffledDeck: readonly string[];
+    }): Promise<CreatedSessionRecord> {
+      let state = createWaitingGameState({
+        sessionId: input.sessionId,
+        hostPlayerId: input.playerId,
+        hostDisplayName: input.displayName
+      });
+      for (const [index, displayName] of input.botDisplayNames.entries()) {
+        const added = addWaitingPlayer({
+          state,
+          playerId: `p${index + 2}`,
+          displayName
+        });
+        if (added.status === 'rejected') throw new Error(added.reason);
+        state = added.state;
+      }
+      const started = startPlayableGame({ state, shuffledDeck: input.shuffledDeck });
+      if (started.status === 'rejected') throw new Error(started.reason);
+      state = started.state;
+
+      const client = await pool.connect();
+      try {
+        await client.query('begin');
+        await client.query(
+          'insert into game_sessions (session_id, canonical_state, revision) values ($1, $2::jsonb, $3)',
+          [input.sessionId, JSON.stringify(state), state.revision]
+        );
+        await client.query(
+          'insert into game_session_memberships (session_id, principal_id, player_id) values ($1, $2, $3)',
+          [input.sessionId, input.principalId, input.playerId]
+        );
+        await client.query('commit');
+        return {
+          sessionId: input.sessionId,
+          playerId: input.playerId,
+          projection: projectGameView(state, input.playerId)
+        };
+      } catch (error) {
+        try { await client.query('rollback'); } catch {}
+        throw error;
+      } finally { client.release(); }
+    },
+
     async joinSession(input: { readonly sessionId: string; readonly principalId: string; readonly playerId: string; readonly displayName: string }): Promise<SessionStoreResult<LoadedPlayerSession>> {
       const client = await pool.connect();
       try {

@@ -2,7 +2,6 @@ import { CribbitApiError, createCribbitApiClient } from '@cribbit/api-client';
 import type { GameViewProjection, PlayerSessionIdentity } from '@cribbit/contracts';
 import type { PlatformAdapter } from '@cribbit/platform/types';
 import { createTelegramPresentationDraft, ensureCribbitStyles, mountGameTable, mountTelegramPresentationController, mountTelegramTopMenuController, mountWebPresentationController, renderCribbitHome, renderCribbitLobby, type MountedGameTable, type WebProductView } from '@cribbit/ui';
-import { createFixturePreview } from './fixture-preview.ts';
 
 const mounted = new WeakSet<HTMLElement>();
 
@@ -51,7 +50,6 @@ export function bootstrap(root: HTMLElement, platform: PlatformAdapter, options:
   let unmountWebPresentation: (() => void) | null = null;
   let unmountTelegramPresentation: (() => void) | null = null;
   let webView: WebProductView = 'lobby';
-  let simulationProjection: GameViewProjection | null = null;
   const telegramDraft = createTelegramPresentationDraft();
   let pollHandle: number | null = null;
 
@@ -89,7 +87,6 @@ export function bootstrap(root: HTMLElement, platform: PlatformAdapter, options:
   };
 
   const createSession = (displayName: string): void => {
-    simulationProjection = null;
     void withBusy(async () => {
       if (platform.kind === 'telegram') await api.ensureTelegramAccount();
       else await api.ensureWebGuest({ displayName });
@@ -101,7 +98,6 @@ export function bootstrap(root: HTMLElement, platform: PlatformAdapter, options:
   };
 
   const joinSession = (sessionId: string, displayName: string): void => {
-    simulationProjection = null;
     void withBusy(async () => {
       if (platform.kind === 'telegram') await api.ensureTelegramAccount();
       else await api.ensureWebGuest({ displayName });
@@ -113,13 +109,29 @@ export function bootstrap(root: HTMLElement, platform: PlatformAdapter, options:
   };
 
   const startSimulation = (): void => {
-    simulationProjection = createFixturePreview().projection;
-    webView = 'game';
-    render();
+    void withBusy(async () => {
+      if (platform.kind === 'telegram') {
+        await api.ensureTelegramAccount();
+      } else {
+        const displayName =
+          root.querySelector<HTMLInputElement>('[name="createName"], #profileName, [data-profile-input]')?.value.trim() ||
+          'QA Player';
+        await api.ensureWebGuest({ displayName });
+      }
+      const result = await api.createSimulation();
+      webView = 'game';
+      state = {
+        player: result.player,
+        projection: result.projection,
+        busy: false,
+        error: null
+      };
+      ensurePolling();
+      render();
+    });
   };
 
   const returnToTelegramRoomSetup = (): void => {
-    simulationProjection = null;
     stopPolling();
     state = { player: null, projection: null, busy: false, error: null };
     render();
@@ -206,20 +218,6 @@ export function bootstrap(root: HTMLElement, platform: PlatformAdapter, options:
     unmountTelegramPresentation = null;
     table?.();
     table = null;
-    if (simulationProjection) {
-      root.innerHTML = '<div data-game-table-root></div>';
-      const target = root.querySelector<HTMLElement>('[data-game-table-root]');
-      if (!target) throw new Error('Simulation table mount missing');
-      table = mountGameTable(target, simulationProjection, {}, platform.kind);
-      if (platform.kind === 'telegram') {
-        unmountTelegramPresentation = mountTelegramTopMenuController(target, {
-          inGame: true,
-          connected: false,
-          onRoomSetup: returnToTelegramRoomSetup,
-        });
-      }
-      return;
-    }
     if (!state.projection || !state.player) {
       root.innerHTML = renderCribbitHome({ busy: state.busy, error: state.error, surface: platform.kind });
       bindHome();

@@ -45,6 +45,7 @@ export interface CribbitApiClient {
   claimTelegramLink(code: string): Promise<{ readonly ok: true; readonly user: AuthenticatedUser }>;
   logout(): Promise<{ readonly ok: true }>;
   createSession(input: { readonly displayName: string }): Promise<SessionProjectionResponse>;
+  createSimulation(): Promise<SessionProjectionResponse>;
   joinSession(input: { readonly sessionId: string; readonly displayName: string }): Promise<SessionProjectionResponse>;
   getProjection(sessionId: string): Promise<GameViewProjection>;
   startGame(sessionId: string): Promise<GameViewProjection>;
@@ -124,6 +125,12 @@ export function createCribbitApiClient(options: CribbitApiClientOptions = {}): C
         method: 'POST',
         headers: { 'content-type': 'application/json' },
         body: JSON.stringify({ displayName: input.displayName })
+      });
+    },
+
+    async createSimulation() {
+      return request<SessionProjectionResponse>('/simulations', {
+        method: 'POST'
       });
     },
 
