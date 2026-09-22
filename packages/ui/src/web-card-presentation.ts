@@ -46,6 +46,16 @@ const HERO_CARDS = [
   },
 ] as const;
 
+function escapeHtml(value: unknown): string {
+  return String(value ?? '').replace(/[&<>"']/g, char => ({
+    '&': '&amp;',
+    '<': '&lt;',
+    '>': '&gt;',
+    '"': '&quot;',
+    "'": '&#039;',
+  })[char] ?? char);
+}
+
 function presentationIdentity(card: GameViewCard): CardPresentationIdentity | null {
   const family = card.family as CardPresentationIdentity['family'];
   if (family !== 'number' && !SPECIAL_FAMILIES.has(family)) return null;
@@ -61,6 +71,25 @@ function presentationIdentity(card: GameViewCard): CardPresentationIdentity | nu
 export function resolveWebCardFaceAsset(card: GameViewCard): string | null {
   const identity = presentationIdentity(card);
   return identity ? resolveCardFaceAsset(identity) : null;
+}
+
+export function renderWebProjectionCard(
+  card: GameViewCard,
+  interactive: boolean,
+  legal: boolean,
+): string {
+  const asset = resolveWebCardFaceAsset(card);
+  const element = interactive ? 'button' : 'div';
+  const action = interactive ? ' data-action="play-card"' : '';
+  const disabled = interactive && !legal ? ' disabled' : '';
+  const face = asset
+    ? `<img class="cc-canonical-card-face" src="/${escapeHtml(asset)}" alt="${escapeHtml(card.label)} card" draggable="false">`
+    : '';
+
+  return `<${element} class="game-card${asset ? ' cc-has-canonical-face' : ''}" data-card-id="${escapeHtml(card.instanceId)}" data-family="${escapeHtml(card.family)}" data-legal="${String(legal)}"${action}${disabled}>
+    ${face}
+    <strong class="game-card__title">${escapeHtml(card.label)}</strong>
+  </${element}>`;
 }
 
 export function canonicalHeroCardMarkup(): string {
