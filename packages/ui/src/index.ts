@@ -34,9 +34,6 @@ export function ensureCribbitStyles(surface?: 'web' | 'telegram'): void {
 function labelForCard(target: Element): string { return target.querySelector<HTMLElement>('.game-card__name')?.textContent?.trim() || 'Effect preview'; }
 export function mountGameTable(root: HTMLElement, projection: GameViewProjection, handlers: GameTableHandlers = {}, surface: 'web' | 'telegram' = 'web'): MountedGameTable {
   ensureCribbitStyles(surface);
-  const body = root.ownerDocument.body;
-  const ownsGameViewClass = surface === 'web' && !body.classList.contains('is-game-view');
-  if (surface === 'web') body.classList.add('is-game-view');
   let state: PresentationState = createPresentationState();
   let currentProjection = projection;
   const render = (): void => { root.innerHTML = renderGameTable(currentProjection, state, surface); };
@@ -70,7 +67,6 @@ export function mountGameTable(root: HTMLElement, projection: GameViewProjection
   const unmount = (() => {
     root.removeEventListener('click', click);
     root.replaceChildren();
-    if (ownsGameViewClass) body.classList.remove('is-game-view');
   }) as MountedGameTable;
   unmount.update = (nextProjection: GameViewProjection): void => { currentProjection = nextProjection; render(); };
   return unmount;

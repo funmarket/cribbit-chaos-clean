@@ -18,6 +18,8 @@ import {
 
 const CLEAN_BINDING_ADAPTER_CSS = String.raw`
 /* Clean-app binding adapters: these map server projections into old UI slots without importing old runtime authority. */
+.app-header{height:var(--header-h);min-height:var(--header-h)}
+.app-header__inner{height:var(--header-h);min-height:var(--header-h)}
 .cribbit-clean-error{margin:12px auto 0;max-width:min(100%,var(--shell,960px));padding:10px 12px;border:1px solid rgba(255,68,95,.45);border-radius:12px;background:rgba(255,68,95,.09);color:#ffdce3;font-weight:800}
 .cribbit-clean-session-code{user-select:all;font-family:ui-monospace,SFMono-Regular,Consolas,monospace;letter-spacing:.08em;text-transform:uppercase}
 .cribbit-clean-binding-note{color:var(--muted,#a7afbd);font-size:11px;line-height:1.35}

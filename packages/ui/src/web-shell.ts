@@ -112,23 +112,10 @@ function prepareCleanBindings(root: HTMLElement): void {
   }
 }
 
-export function setWebShellView(root: HTMLElement, view: WebProductView): void {
-  root.ownerDocument.body.classList.toggle('is-game-view', view === 'game');
-
-  root.querySelectorAll<HTMLElement>('.view').forEach(section => {
-    section.classList.toggle('is-active', section.dataset.view === view);
-  });
-
-  root.querySelectorAll<HTMLElement>('[data-nav]').forEach(button => {
-    button.setAttribute('aria-current', button.dataset.nav === view ? 'page' : 'false');
-  });
-}
-
 export function mountWebShell(root: HTMLElement): MountedWebShell {
   root.innerHTML = OLD_PACKAGES_UI_SRC_TEMPLATE_HTML;
   prepareCleanBindings(root);
   mountCribbitChaosHero(root);
-  setWebShellView(root, 'lobby');
 
   return () => {
     root.ownerDocument.body.classList.remove('is-game-view');

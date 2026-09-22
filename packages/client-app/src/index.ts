@@ -1,7 +1,7 @@
 import { CribbitApiError, createCribbitApiClient } from '@cribbit/api-client';
 import type { GameViewProjection, PlayerSessionIdentity } from '@cribbit/contracts';
 import type { PlatformAdapter } from '@cribbit/platform/types';
-import { createTelegramPresentationDraft, ensureCribbitStyles, mountGameTable, mountTelegramPresentationController, mountTelegramTopMenuController, mountWebPresentationController, mountWebShell, setWebShellView, updateWebPresentation, renderCribbitHome, renderCribbitLobby, type MountedGameTable, type WebProductView } from '@cribbit/ui';
+import { createTelegramPresentationDraft, ensureCribbitStyles, mountGameTable, mountTelegramPresentationController, mountTelegramTopMenuController, mountWebPresentationController, mountWebShell, updateWebPresentation, renderCribbitHome, renderCribbitLobby, type MountedGameTable, type WebProductView } from '@cribbit/ui';
 
 const mounted = new WeakSet<HTMLElement>();
 
@@ -296,7 +296,6 @@ export function bootstrap(root: HTMLElement, platform: PlatformAdapter, options:
 
   function updatePresentation(): void {
     if (platform.kind === 'web') {
-      setWebShellView(root, webView);
       updateWebPresentation(root, {
         projection: state.projection,
         busy: state.busy,
