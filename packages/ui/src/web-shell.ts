@@ -6,7 +6,7 @@ export interface MountedWebShell {
   (): void;
 }
 
-function mountDonorHero(root: HTMLElement): void {
+function mountCribbitChaosHero(root: HTMLElement): void {
   const heroHost = root.querySelector<HTMLElement>('.lobby-hero');
   const roomCreation = root.querySelector<HTMLElement>('.setup-panel');
   const startButton = root.querySelector<HTMLButtonElement>('#startGameButton');
@@ -127,7 +127,7 @@ export function setWebShellView(root: HTMLElement, view: WebProductView): void {
 export function mountWebShell(root: HTMLElement): MountedWebShell {
   root.innerHTML = OLD_PACKAGES_UI_SRC_TEMPLATE_HTML;
   prepareCleanBindings(root);
-  mountDonorHero(root);
+  mountCribbitChaosHero(root);
   setWebShellView(root, 'lobby');
 
   return () => {
