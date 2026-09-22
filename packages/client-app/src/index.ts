@@ -1,7 +1,7 @@
 import { CribbitApiError, createCribbitApiClient } from '@cribbit/api-client';
 import type { GameViewProjection, PlayerSessionIdentity } from '@cribbit/contracts';
 import type { PlatformAdapter } from '@cribbit/platform/types';
-import { createTelegramPresentationDraft, ensureCribbitStyles, mountGameTable, mountTelegramPresentationController, mountTelegramTopMenuController, mountWebPresentationController, renderCribbitHome, renderCribbitLobby, type MountedGameTable, type WebProductView } from '@cribbit/ui';
+import { createTelegramPresentationDraft, ensureCribbitStyles, mountGameTable, mountTelegramPresentationController, mountTelegramTopMenuController, mountWebPresentationController, mountWebShell, setWebShellView, updateWebPresentation, renderCribbitHome, renderCribbitLobby, type MountedGameTable, type WebProductView } from '@cribbit/ui';
 
 const mounted = new WeakSet<HTMLElement>();
 
@@ -47,6 +47,8 @@ export function bootstrap(root: HTMLElement, platform: PlatformAdapter, options:
   const api = createCribbitApiClient({ baseUrl: normalizeApiBaseUrl(options.apiBaseUrl), getAuthHeaders: platform.getAuthHeaders });
   let state: AppState = { player: null, projection: null, busy: false, error: null };
   let table: MountedGameTable | null = null;
+  let unmountWebShell: (() => void) | null = null;
+  let unbindWebCommands: (() => void) | null = null;
   let unmountWebPresentation: (() => void) | null = null;
   let unmountTelegramPresentation: (() => void) | null = null;
   let webView: WebProductView = 'lobby';
@@ -60,7 +62,7 @@ export function bootstrap(root: HTMLElement, platform: PlatformAdapter, options:
 
   const setState = (next: Partial<AppState>): void => {
     state = { ...state, ...next };
-    render();
+    updatePresentation();
   };
 
   const refreshProjection = async (): Promise<void> => {
@@ -93,7 +95,7 @@ export function bootstrap(root: HTMLElement, platform: PlatformAdapter, options:
       const result = await api.createSession({ displayName });
       state = { player: result.player, projection: result.projection, busy: false, error: null };
       ensurePolling();
-      render();
+      updatePresentation();
     });
   };
 
@@ -104,7 +106,7 @@ export function bootstrap(root: HTMLElement, platform: PlatformAdapter, options:
       const result = await api.joinSession({ sessionId, displayName });
       state = { player: result.player, projection: result.projection, busy: false, error: null };
       ensurePolling();
-      render();
+      updatePresentation();
     });
   };
 
@@ -127,14 +129,14 @@ export function bootstrap(root: HTMLElement, platform: PlatformAdapter, options:
         error: null
       };
       ensurePolling();
-      render();
+      updatePresentation();
     });
   };
 
   const returnToTelegramRoomSetup = (): void => {
     stopPolling();
     state = { player: null, projection: null, busy: false, error: null };
-    render();
+    updatePresentation();
   };
 
   const startGame = (): void => {
@@ -142,6 +144,7 @@ export function bootstrap(root: HTMLElement, platform: PlatformAdapter, options:
     if (!player) return;
     void withBusy(async () => {
       const projection = await api.startGame(player.sessionId);
+      if (platform.kind === 'web') webView = 'game';
       setState({ projection });
     });
   };
@@ -177,6 +180,87 @@ export function bootstrap(root: HTMLElement, platform: PlatformAdapter, options:
     });
   };
 
+  function bindWebCommands(): () => void {
+    const readCreateName = (): string =>
+      root.querySelector<HTMLInputElement>('[name="createName"], #profileName, [data-profile-input]')?.value.trim() || 'Player 1';
+    const readJoinSession = (): string | undefined =>
+      root.querySelector<HTMLInputElement>('[name="sessionId"], #joinCode, [data-join-code]')?.value.trim() || undefined;
+    const readJoinName = (): string =>
+      root.querySelector<HTMLInputElement>('[name="joinName"], #profileName, [data-profile-input]')?.value.trim() || 'Player 2';
+
+    const onClick = (event: Event): void => {
+      const target = event.target instanceof Element ? event.target : null;
+      if (!target) return;
+
+      const createAnchor = target.closest<HTMLAnchorElement>('a.cc-web-create[href="#roomCreation"]');
+      if (createAnchor) {
+        event.preventDefault();
+        root.querySelector<HTMLElement>('#roomCreation')?.scrollIntoView({ block: 'start', behavior: 'smooth' });
+        return;
+      }
+
+      const action = target.closest<HTMLElement>('[data-action]')?.dataset.action;
+      if (action === 'create-game') {
+        event.preventDefault();
+        createSession(readCreateName());
+        return;
+      }
+      if (action === 'join-room') {
+        event.preventDefault();
+        const session = readJoinSession();
+        if (session) joinSession(session, readJoinName());
+        return;
+      }
+      if (action === 'demo-game') {
+        event.preventDefault();
+        startSimulation();
+        return;
+      }
+      if (action === 'start-game') {
+        event.preventDefault();
+        startGame();
+        return;
+      }
+      if (action === 'draw-card') {
+        event.preventDefault();
+        drawCard();
+        return;
+      }
+      if (action === 'play-card') {
+        const card = target.closest<HTMLElement>('[data-card-id]');
+        if (card?.dataset.cardId) {
+          event.preventDefault();
+          playCard(card.dataset.cardId);
+        }
+      }
+    };
+
+    const onSubmit = (event: SubmitEvent): void => {
+      const form = event.target instanceof HTMLFormElement ? event.target : null;
+      if (!form) return;
+
+      if (form.matches('[data-create-session]')) {
+        event.preventDefault();
+        createSession(readCreateName());
+        return;
+      }
+
+      if (form.matches('[data-join-session]')) {
+        event.preventDefault();
+        const session = readJoinSession();
+        if (session) joinSession(session, readJoinName());
+      }
+    };
+
+    root.addEventListener('click', onClick);
+    root.addEventListener('submit', onSubmit);
+
+    return () => {
+      root.removeEventListener('click', onClick);
+      root.removeEventListener('submit', onSubmit);
+    };
+  }
+
   function bindHome(): void {
     const readCreateName = (): string =>
       root.querySelector<HTMLInputElement>('[name="createName"], #profileName, [data-profile-input]')?.value.trim() || 'Player 1';
@@ -210,72 +294,83 @@ export function bootstrap(root: HTMLElement, platform: PlatformAdapter, options:
     bindSimulationControls();
   }
 
-  function render(): void {
-    ensureCribbitStyles();
-    unmountWebPresentation?.();
-    unmountWebPresentation = null;
+  function updatePresentation(): void {
+    if (platform.kind === 'web') {
+      setWebShellView(root, webView);
+      updateWebPresentation(root, {
+        projection: state.projection,
+        busy: state.busy,
+        error: state.error,
+      });
+      return;
+    }
+
+    renderTelegram();
+  }
+
+  function renderTelegram(): void {
+    ensureCribbitStyles('telegram');
     unmountTelegramPresentation?.();
     unmountTelegramPresentation = null;
     table?.();
     table = null;
+
     if (!state.projection || !state.player) {
-      root.innerHTML = renderCribbitHome({ busy: state.busy, error: state.error, surface: platform.kind });
+      root.innerHTML = renderCribbitHome({ busy: state.busy, error: state.error, surface: 'telegram' });
       bindHome();
-      if (platform.kind === 'web') {
-        unmountWebPresentation = mountWebPresentationController(root, {
-          canOpenGame: () => Boolean(state.projection && state.projection.status !== 'waiting'),
-          canOpenRecap: () => Boolean(state.projection?.winner),
-          initialView: webView,
-          onViewChange: (nextView) => { webView = nextView; },
-        });
-      } else {
-        unmountTelegramPresentation = mountTelegramPresentationController(root, telegramDraft, {
-          connected: false,
-          onSimulation: startSimulation,
-        });
-      }
+      unmountTelegramPresentation = mountTelegramPresentationController(root, telegramDraft, {
+        connected: false,
+        onSimulation: startSimulation,
+      });
       return;
     }
 
     if (state.projection.status === 'waiting') {
-      root.innerHTML = renderCribbitLobby(state.projection, { busy: state.busy, error: state.error, surface: platform.kind });
+      root.innerHTML = renderCribbitLobby(state.projection, { busy: state.busy, error: state.error, surface: 'telegram' });
       root.querySelector<HTMLButtonElement>('[data-action="start-game"]')?.addEventListener('click', startGame);
       bindSimulationControls();
-      if (platform.kind === 'web') {
-        unmountWebPresentation = mountWebPresentationController(root, {
-          canOpenGame: () => Boolean(state.projection && state.projection.status !== 'waiting'),
-          canOpenRecap: () => Boolean(state.projection?.winner),
-          initialView: webView,
-          onViewChange: (nextView) => { webView = nextView; },
-        });
-      } else {
-        unmountTelegramPresentation = mountTelegramPresentationController(root, telegramDraft, {
-          connected: false,
-          onSimulation: startSimulation,
-        });
-      }
+      unmountTelegramPresentation = mountTelegramPresentationController(root, telegramDraft, {
+        connected: false,
+        onSimulation: startSimulation,
+      });
       return;
     }
 
     root.innerHTML = '<div data-game-table-root></div>';
     const target = root.querySelector<HTMLElement>('[data-game-table-root]');
     if (!target) throw new Error('Game table mount missing');
-    table = mountGameTable(target, state.projection, { onDraw: drawCard, onPlay: playCard }, platform.kind);
-    if (platform.kind === 'telegram') {
-      unmountTelegramPresentation = mountTelegramTopMenuController(target, {
-        inGame: true,
-        connected: false,
-        onRoomSetup: returnToTelegramRoomSetup,
-      });
-    }
+    table = mountGameTable(target, state.projection, { onDraw: drawCard, onPlay: playCard }, 'telegram');
+    unmountTelegramPresentation = mountTelegramTopMenuController(target, {
+      inGame: true,
+      connected: false,
+      onRoomSetup: returnToTelegramRoomSetup,
+    });
   }
 
-  render();
+  if (platform.kind === 'web') {
+    ensureCribbitStyles('web');
+    unmountWebShell = mountWebShell(root);
+    unbindWebCommands = bindWebCommands();
+    unmountWebPresentation = mountWebPresentationController(root, {
+      canOpenGame: () => Boolean(state.projection && state.projection.status !== 'waiting'),
+      canOpenRecap: () => Boolean(state.projection?.winner),
+      initialView: webView,
+      onViewChange: (nextView) => {
+        webView = nextView;
+        updatePresentation();
+      },
+    });
+    updatePresentation();
+  } else {
+    renderTelegram();
+  }
   ensurePolling();
 
   return () => {
     stopPolling();
     unmountWebPresentation?.();
+    unbindWebCommands?.();
+    unmountWebShell?.();
     unmountTelegramPresentation?.();
     table?.();
     mounted.delete(root);

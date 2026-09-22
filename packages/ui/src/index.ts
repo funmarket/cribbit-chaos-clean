@@ -3,6 +3,9 @@ import { GAME_TABLE_STYLES, TELEGRAM_GAME_TABLE_STYLES, WEB_GAME_TABLE_STYLES } 
 import { createPresentationState, renderGameTable, type PresentationState } from './game-table.ts';
 export * from './game-table.ts';
 export * from './web-controller.ts';
+export * from './web-shell.ts';
+export * from './web-game-binding.ts';
+export * from './web-card-presentation.ts';
 export * from './telegram-controller.ts';
 export { GAME_TABLE_STYLES } from './styles.ts';
 
