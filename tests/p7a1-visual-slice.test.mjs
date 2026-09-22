@@ -20,7 +20,7 @@ test('fixture projection renders players, hand, controls and current turn', () =
   assert.match(html, /Night Squad/);
   assert.match(html, /Maya/);
   assert.match(html, /Rami/);
-  assert.match(html, /data-current-turn="true"/);
+  assert.match(html, /class="player-row is-current is-you"/);
   assert.match(html, /Pass/);
   assert.match(html, /Rewind/);
   assert.match(html, /Nope Card/);
