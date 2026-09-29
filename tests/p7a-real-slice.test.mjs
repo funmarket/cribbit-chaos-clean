@@ -7,7 +7,7 @@ import { Pool } from 'pg';
 import { createNodeApiHandler } from '../apps/api/src/node-runtime.ts';
 import { createCribbitApiClient } from '../packages/api-client/src/index.ts';
 import {
-  isLegalOrdinaryCardPlay,
+  isExecutableCardPlay,
   projectGameView,
   resolvePlayableEngineCommand,
   runEngineTransition
@@ -115,7 +115,7 @@ dbTest('P7A real API creates, joins, starts, draws, persists and syncs canonical
 });
 test('P7A ordinary PLAY_CARD is server-owned: legal play, ownership rejection, and winner boundary', () => {
   const state = activeState();
-  assert.equal(isLegalOrdinaryCardPlay(state, 'p1', 'number_lime_2_01'), true);
+  assert.equal(isExecutableCardPlay(state, 'p1', 'number_lime_2_01'), true);
 
   const legal = runEngineTransition({
     state,

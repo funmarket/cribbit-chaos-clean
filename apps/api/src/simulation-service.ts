@@ -1,6 +1,6 @@
 import type { AcceptedCommandReceipt, GameCommandPayload } from '@cribbit/contracts';
 import {
-  isLegalNumberCardPlay,
+  isExecutableCardPlay,
   projectGameView,
   resolvePlayableEngineCommand,
   runEngineTransition,
@@ -16,7 +16,7 @@ function fingerprint(command: GameCommandPayload): string {
 function botCommand(state: CanonicalGameState, actorPlayerId: string): GameCommandPayload {
   const hand = state.zones.hands[actorPlayerId] ?? [];
   const playable = hand.find((cardInstanceId) =>
-    isLegalNumberCardPlay(state, actorPlayerId, cardInstanceId)
+    isExecutableCardPlay(state, actorPlayerId, cardInstanceId)
   );
   return playable
     ? { kind: 'PLAY_CARD', cardInstanceId: playable }

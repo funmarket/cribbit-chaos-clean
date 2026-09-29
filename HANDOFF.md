@@ -2712,13 +2712,13 @@ Create a permanent in-handoff or approved docs matrix mapping:
 
 This task is read-only classification.
 
-PR #13 is the source-of-truth completion record. Exact head: `2544bcf14b6c3a5a18f5d77f2efaec1c73e8f3f6`. ENG-002 remains a separate implementation task and is not included in this PR.
+PR #13 is the source-of-truth completion record. Completion commit: `d78764dfbe85c9e771f9cab721532cbb2dfd84f3`; PR remains open for owner review. ENG-002 remains a separate implementation task and is not included in this PR.
 
 ### `ENG-002` - Core legality and matching
 
 **Status:** `IN PROGRESS`
 
-Current implementation branch: `task/ENG-002-normal-turn-legality`. The clean engine now exposes canonical normal-turn card eligibility, keeps voluntary Draw available with legal plays, blocks direct Special stacking after a preceding Special, and represents unresolved Special-family resolution as an explicit server-owned continuation boundary rather than guessing an effect. Focused tests and typecheck pass; hosted proof and PR review remain outstanding.
+Current implementation branch: `task/ENG-002-normal-turn-legality`. The clean engine now separates canonical normal-turn eligibility from executable capability, keeps voluntary Draw available with legal plays, blocks direct Special stacking after a preceding Special, preserves the narrow RULE-NOPE role, and fails closed for unsupported Special-family commands without mutating discard, flow, or turn state. Public projection exposes only executable capabilities and no internal completion-policy markers. Number matching beneath a preceding Special is fail-closed to the persistent active color because the authority set does not prove transparent value matching. Focused tests and typecheck remain required after this correction; hosted proof and PR review are outstanding.
 
 Port/adapt tested donor legality where compatible.
 
