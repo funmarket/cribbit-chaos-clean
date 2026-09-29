@@ -1,5 +1,6 @@
 export const GAME_ROUTE_PATHS = {
   createSession: '/api/sessions',
+  createSimulation: '/api/simulations',
   joinSession: '/api/sessions/:sessionId/join',
   projection: '/api/sessions/:sessionId/projection',
   startSession: '/api/sessions/:sessionId/start',

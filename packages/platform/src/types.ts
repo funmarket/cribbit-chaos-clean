@@ -1,1 +1,6 @@
-export interface PlatformAdapter { readonly kind: 'web' | 'telegram' }
+export type PlatformKind = 'web' | 'telegram';
+
+export interface PlatformAdapter {
+  readonly kind: PlatformKind;
+  getAuthHeaders(): HeadersInit;
+}

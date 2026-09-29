@@ -18,6 +18,7 @@
     "build:web": "node tools/build.mjs web",
     "build:telegram": "node tools/build.mjs telegram",
     "build:api": "node tools/build.mjs api",
+    "db:migrate": "node db/migrate.mjs",
     "start:api": "node dist/api/main.js",
     "dev": "node tools/dev.mjs",
     "build": "npm run build:web && npm run build:telegram && npm run build:api",

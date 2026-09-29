@@ -72,6 +72,7 @@ export const SURFACE_RULES = Object.freeze({
 });
 
 export const EXACT_HTML_SHELL = '<!doctype html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>Cribbit CHAOS</title></head><body><div id="app"></div><script type="module" src="/src/main.ts"></script></body></html>';
+export const TELEGRAM_HTML_SHELL = '<!doctype html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>Cribbit CHAOS</title></head><body><div id="app"></div><script src="https://telegram.org/js/telegram-web-app.js"></script><script type="module" src="/src/main.ts"></script></body></html>';
 
 export const CLIENT_CAPABILITY_PATTERNS = Object.freeze([
   ['direct fetch', /\bfetch\s*\(/],

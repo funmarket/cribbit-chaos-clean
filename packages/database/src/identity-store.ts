@@ -1,7 +1,10 @@
 import type pg from 'pg';
 import { withPostgresTransaction } from './postgres.ts';
 
-export interface AppUserRecord {
+export type AuthProvider = 'web_guest' | 'web_password';
+export type IdentityLinkResult = 'linked' | 'identity_conflict' | 'account_conflict';
+
+export interface AuthenticatedUserRecord {
   readonly id: string;
   readonly displayName: string;
   readonly displayUsername?: string;
@@ -12,6 +15,36 @@ export interface TelegramIdentityInput {
   readonly displayName: string;
   readonly username?: string;
   readonly payload?: unknown;
+}
+
+export interface WebCredentialInput {
+  readonly loginUsername: string;
+  readonly passwordHash: string;
+}
+
+export interface WebCredentialRecord {
+  readonly userId: string;
+  readonly passwordHash: string;
+}
+
+export interface LoginMethodsRecord {
+  readonly web: { readonly loginUsername: string } | null;
+  readonly telegram: { readonly username: string | null } | null;
+}
+
+export interface IdentityStore {
+  createAnonymousUser(displayName: string): Promise<AuthenticatedUserRecord>;
+  createWebUser(input: WebCredentialInput & { readonly displayName: string }): Promise<AuthenticatedUserRecord>;
+  attachWebCredential(userId: string, input: WebCredentialInput): Promise<IdentityLinkResult>;
+  findWebCredential(loginUsername: string): Promise<WebCredentialRecord | null>;
+  findLoginMethods(userId: string): Promise<LoginMethodsRecord | null>;
+  findTelegramUserId(telegramId: string): Promise<string | null>;
+  createTelegramUser(input: TelegramIdentityInput): Promise<AuthenticatedUserRecord>;
+  attachTelegramIdentity(userId: string, input: TelegramIdentityInput): Promise<IdentityLinkResult>;
+  createAuthSession(userId: string, provider: AuthProvider): Promise<string>;
+  authenticateSession(token: string): Promise<AuthenticatedUserRecord | null>;
+  revokeAuthSession(token: string): Promise<void>;
+  getUser(userId: string): Promise<AuthenticatedUserRecord | null>;
 }
 
 function requireWebCrypto(): Crypto {
@@ -26,8 +59,7 @@ function randomToken(byteLength = 32): string {
 }
 
 async function hashSessionToken(token: string): Promise<string> {
-  const encoded = new TextEncoder().encode(token);
-  const digest = await requireWebCrypto().subtle.digest('SHA-256', encoded);
+  const digest = await requireWebCrypto().subtle.digest('SHA-256', new TextEncoder().encode(token));
   return Buffer.from(new Uint8Array(digest)).toString('hex');
 }
 
@@ -37,76 +69,168 @@ function normalizeDisplayName(value: string): string {
   return displayName;
 }
 
-export function createIdentityStore(pool: pg.Pool) {
+function rowToUser(row: { id: string; display_name: string; display_username: string | null }): AuthenticatedUserRecord {
   return {
-    async resolveOrCreateTelegramUser(input: TelegramIdentityInput): Promise<AppUserRecord> {
-      const displayName = normalizeDisplayName(input.displayName);
+    id: row.id,
+    displayName: row.display_name,
+    ...(row.display_username ? { displayUsername: row.display_username } : {})
+  };
+}
+
+export function createIdentityStore(pool: pg.Pool): IdentityStore {
+  return {
+    async createAnonymousUser(displayName) {
+      const result = await pool.query<{ id: string; display_name: string; display_username: string | null }>(
+        `insert into users(display_name) values($1) returning id, display_name, display_username`,
+        [normalizeDisplayName(displayName)]
+      );
+      return rowToUser(result.rows[0]);
+    },
+
+    async createWebUser(input) {
       return withPostgresTransaction(pool, async (client) => {
-        await client.query('select pg_advisory_xact_lock(hashtext($1))', [`telegram:${input.telegramId}`]);
-        const existing = await client.query<{
-          id: string;
-          display_name: string;
-          display_username: string | null;
-        }>(
-          `select u.id, u.display_name, u.display_username
-             from user_identities i
-             join app_users u on u.id = i.user_id
-            where i.provider = 'telegram' and i.provider_user_id = $1
-            for update`,
-          [input.telegramId]
-        );
-
-        if (existing.rowCount) {
-          const row = existing.rows[0];
-          await client.query(
-            `update app_users set display_name = $2, updated_at = now() where id = $1`,
-            [row.id, displayName]
-          );
-          await client.query(
-            `update user_identities
-                set provider_username = $2,
-                    provider_payload = $3::jsonb
-              where provider = 'telegram' and provider_user_id = $1`,
-            [input.telegramId, input.username ?? null, JSON.stringify(input.payload ?? {})]
-          );
-          return {
-            id: row.id,
-            displayName,
-            ...(row.display_username ? { displayUsername: row.display_username } : {})
-          };
-        }
-
-        const user = await client.query<{ id: string; display_name: string }>(
-          `insert into app_users(display_name) values($1) returning id, display_name`,
-          [displayName]
+        await client.query('select pg_advisory_xact_lock(hashtext($1))', [`web_password:${input.loginUsername}`]);
+        const conflict = await client.query('select 1 from user_identities where provider = $1 and provider_user_id = $2', ['web_password', input.loginUsername]);
+        if (conflict.rowCount) throw new Error('IDENTITY_CONFLICT');
+        const user = await client.query<{ id: string; display_name: string; display_username: string | null }>(
+          `insert into users(display_name) values($1) returning id, display_name, display_username`,
+          [normalizeDisplayName(input.displayName)]
         );
         const userId = user.rows[0].id;
         await client.query(
-          `insert into user_identities(user_id, provider, provider_user_id, provider_username, provider_payload)
-           values($1, 'telegram', $2, $3, $4::jsonb)`,
-          [userId, input.telegramId, input.username ?? null, JSON.stringify(input.payload ?? {})]
-        );
-        return { id: userId, displayName: user.rows[0].display_name };
-      });
-    },
-
-    async createGuestUser(displayName = 'Web Player'): Promise<AppUserRecord> {
-      const cleanName = normalizeDisplayName(displayName);
-      return withPostgresTransaction(pool, async (client) => {
-        const user = await client.query<{ id: string; display_name: string }>(
-          `insert into app_users(display_name) values($1) returning id, display_name`,
-          [cleanName]
+          `insert into user_identities(user_id, provider, provider_user_id) values($1, 'web_password', $2)`,
+          [userId, input.loginUsername]
         );
         await client.query(
-          `insert into user_identities(user_id, provider, provider_user_id)
-           values($1, 'guest', $2)`,
-          [user.rows[0].id, `guest_${randomToken(16)}`]
+          `insert into web_credentials(user_id, login_username, password_hash) values($1, $2, $3)`,
+          [userId, input.loginUsername, input.passwordHash]
         );
-        return { id: user.rows[0].id, displayName: user.rows[0].display_name };
+        return rowToUser(user.rows[0]);
       });
     },
 
-    async createAuthSession(userId: string, provider: 'telegram' | 'guest'): Promise<string> {
+    async attachWebCredential(userId, input) {
+      return withPostgresTransaction(pool, async (client) => {
+        await client.query('select pg_advisory_xact_lock(hashtext($1))', [`web_password:${input.loginUsername}`]);
+        const owner = await client.query<{ user_id: string }>(
+          `select user_id from user_identities where provider = 'web_password' and provider_user_id = $1`,
+          [input.loginUsername]
+        );
+        if (owner.rowCount && owner.rows[0].user_id !== userId) return 'identity_conflict' as const;
+        const current = await client.query<{ provider_user_id: string }>(
+          `select provider_user_id from user_identities where user_id = $1 and provider = 'web_password'`,
+          [userId]
+        );
+        if (current.rowCount && current.rows[0].provider_user_id !== input.loginUsername) return 'account_conflict' as const;
+        if (!current.rowCount) {
+          await client.query(
+            `insert into user_identities(user_id, provider, provider_user_id) values($1, 'web_password', $2)`,
+            [userId, input.loginUsername]
+          );
+          await client.query(
+            `insert into web_credentials(user_id, login_username, password_hash) values($1, $2, $3)`,
+            [userId, input.loginUsername, input.passwordHash]
+          );
+        }
+        return 'linked' as const;
+      });
+    },
+
+    async findWebCredential(loginUsername) {
+      const result = await pool.query<{ user_id: string; password_hash: string }>(
+        `select user_id, password_hash from web_credentials where login_username = $1`,
+        [loginUsername]
+      );
+      return result.rowCount ? { userId: result.rows[0].user_id, passwordHash: result.rows[0].password_hash } : null;
+    },
+
+    async findLoginMethods(userId) {
+      const result = await pool.query<{
+        id: string;
+        login_username: string | null;
+        telegram_provider_user_id: string | null;
+        telegram_username: string | null;
+      }>(
+        `select u.id,
+                w.login_username,
+                t.provider_user_id as telegram_provider_user_id,
+                t.provider_username as telegram_username
+           from users u
+           left join web_credentials w on w.user_id = u.id
+           left join user_identities t on t.user_id = u.id and t.provider = 'telegram'
+          where u.id = $1`,
+        [userId]
+      );
+      if (!result.rowCount) return null;
+      const row = result.rows[0];
+      return {
+        web: row.login_username ? { loginUsername: row.login_username } : null,
+        telegram: row.telegram_provider_user_id ? { username: row.telegram_username } : null
+      };
+    },
+
+    async findTelegramUserId(telegramId) {
+      const result = await pool.query<{ user_id: string }>(
+        `select user_id from user_identities where provider = 'telegram' and provider_user_id = $1`,
+        [telegramId]
+      );
+      return result.rows[0]?.user_id ?? null;
+    },
+
+    async createTelegramUser(input) {
+      return withPostgresTransaction(pool, async (client) => {
+        await client.query('select pg_advisory_xact_lock(hashtext($1))', [`telegram:${input.telegramId}`]);
+        const existing = await client.query<{ id: string; display_name: string; display_username: string | null }>(
+          `select u.id, u.display_name, u.display_username
+             from user_identities i join users u on u.id = i.user_id
+            where i.provider = 'telegram' and i.provider_user_id = $1`,
+          [input.telegramId]
+        );
+        if (existing.rowCount) return rowToUser(existing.rows[0]);
+        const user = await client.query<{ id: string; display_name: string; display_username: string | null }>(
+          `insert into users(display_name) values($1) returning id, display_name, display_username`,
+          [normalizeDisplayName(input.displayName)]
+        );
+        await client.query(
+          `insert into user_identities(user_id, provider, provider_user_id, provider_username, provider_payload)
+           values($1, 'telegram', $2, $3, $4::jsonb)`,
+          [user.rows[0].id, input.telegramId, input.username ?? null, JSON.stringify(input.payload ?? {})]
+        );
+        return rowToUser(user.rows[0]);
+      });
+    },
+
+    async attachTelegramIdentity(userId, input) {
+      return withPostgresTransaction(pool, async (client) => {
+        await client.query('select pg_advisory_xact_lock(hashtext($1))', [`telegram:${input.telegramId}`]);
+        const owner = await client.query<{ user_id: string }>(
+          `select user_id from user_identities where provider = 'telegram' and provider_user_id = $1`,
+          [input.telegramId]
+        );
+        if (owner.rowCount && owner.rows[0].user_id !== userId) return 'identity_conflict' as const;
+        const current = await client.query<{ provider_user_id: string }>(
+          `select provider_user_id from user_identities where user_id = $1 and provider = 'telegram'`,
+          [userId]
+        );
+        if (current.rowCount && current.rows[0].provider_user_id !== input.telegramId) return 'account_conflict' as const;
+        if (current.rowCount) {
+          await client.query(
+            `update user_identities set provider_username = $2, provider_payload = $3::jsonb
+              where user_id = $1 and provider = 'telegram'`,
+            [userId, input.username ?? null, JSON.stringify(input.payload ?? {})]
+          );
+        } else {
+          await client.query(
+            `insert into user_identities(user_id, provider, provider_user_id, provider_username, provider_payload)
+             values($1, 'telegram', $2, $3, $4::jsonb)`,
+            [userId, input.telegramId, input.username ?? null, JSON.stringify(input.payload ?? {})]
+          );
+        }
+        return 'linked' as const;
+      });
+    },
+
+    async createAuthSession(userId, provider) {
       const token = randomToken();
       await pool.query(
         `insert into auth_sessions(user_id, token_hash, provider, expires_at, last_used_at)
@@ -116,29 +240,29 @@ export function createIdentityStore(pool: pg.Pool) {
       return token;
     },
 
-    async authenticateSession(token: string): Promise<AppUserRecord | null> {
+    async authenticateSession(token) {
       const tokenHash = await hashSessionToken(token);
-      const result = await pool.query<{
-        id: string;
-        display_name: string;
-        display_username: string | null;
-      }>(
+      const result = await pool.query<{ id: string; display_name: string; display_username: string | null }>(
         `select u.id, u.display_name, u.display_username
-           from auth_sessions s
-           join app_users u on u.id = s.user_id
-          where s.token_hash = $1
-            and s.revoked_at is null
-            and s.expires_at > now()`,
+           from auth_sessions s join users u on u.id = s.user_id
+          where s.token_hash = $1 and s.revoked_at is null and s.expires_at > now()`,
         [tokenHash]
       );
       if (!result.rowCount) return null;
-      await pool.query(`update auth_sessions set last_used_at = now() where token_hash = $1`, [tokenHash]);
-      const row = result.rows[0];
-      return {
-        id: row.id,
-        displayName: row.display_name,
-        ...(row.display_username ? { displayUsername: row.display_username } : {})
-      };
+      await pool.query('update auth_sessions set last_used_at = now() where token_hash = $1', [tokenHash]);
+      return rowToUser(result.rows[0]);
+    },
+
+    async revokeAuthSession(token) {
+      await pool.query('update auth_sessions set revoked_at = now() where token_hash = $1 and revoked_at is null', [await hashSessionToken(token)]);
+    },
+
+    async getUser(userId) {
+      const result = await pool.query<{ id: string; display_name: string; display_username: string | null }>(
+        'select id, display_name, display_username from users where id = $1',
+        [userId]
+      );
+      return result.rowCount ? rowToUser(result.rows[0]) : null;
     }
   };
 }

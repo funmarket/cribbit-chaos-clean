@@ -1,5 +1,5 @@
 import ts from 'typescript';
-import { CLIENT_CAPABILITY_PATTERNS, CLIENT_FORBIDDEN_TARGETS, CLIENT_WORKSPACES, EXACT_HTML_SHELL, SURFACE_RULES, WORKSPACES, isAllowedClientCapability, isAllowedEdge, isAllowedNodeBuiltinImport } from './policy.mjs';
+import { CLIENT_CAPABILITY_PATTERNS, CLIENT_FORBIDDEN_TARGETS, CLIENT_WORKSPACES, EXACT_HTML_SHELL, SURFACE_RULES, TELEGRAM_HTML_SHELL, WORKSPACES, isAllowedClientCapability, isAllowedEdge, isAllowedNodeBuiltinImport } from './policy.mjs';
 import { normalizeHtml, readJson, readText, walk } from './fs.mjs';
 import { analyzeImports, sourceWorkspace } from './imports.mjs';
 import { dependencySection, loadWorkspaceManifests, validateManifestDeclarations } from './manifests.mjs';
@@ -14,7 +14,8 @@ errors.push(...validateManifestDeclarations(manifests));
 
 for (const surface of ['apps/web', 'apps/telegram']) {
   const html = await readText(`${surface}/index.html`);
-  if (normalizeHtml(html) !== EXACT_HTML_SHELL) fail(`${surface}: HTML shell differs from the approved P1 grammar`);
+  const approvedHtmlShell = surface === 'apps/telegram' ? TELEGRAM_HTML_SHELL : EXACT_HTML_SHELL;
+  if (normalizeHtml(html) !== approvedHtmlShell) fail(`${surface}: HTML shell differs from the approved P1 grammar`);
   const sourceFiles = await walk(`${surface}/src`, (file) => /\.[cm]?[jt]sx?$/.test(file));
   if (sourceFiles.length !== 1 || sourceFiles[0] !== `${surface}/src/main.ts`) fail(`${surface}: exactly one source entry main.ts is required in P1`);
 }

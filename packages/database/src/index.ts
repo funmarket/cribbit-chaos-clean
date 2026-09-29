@@ -1,13 +1,15 @@
-export { P6_MIGRATION_SQL, applyP6Migration } from './schema.ts';
 export type { SqlClient } from './schema.ts';
-export {
-  CLEAN_GAME_CORE_MIGRATION_SQL,
-  CLEAN_IDENTITY_MIGRATION_SQL,
-  applyCleanMigrations
-} from './migrate.ts';
 export { createPostgresPool, withPostgresTransaction } from './postgres.ts';
 export { createIdentityStore } from './identity-store.ts';
-export type { AppUserRecord, TelegramIdentityInput } from './identity-store.ts';
+export type {
+  AuthProvider,
+  AuthenticatedUserRecord,
+  IdentityLinkResult,
+  IdentityStore,
+  TelegramIdentityInput,
+  WebCredentialInput,
+  WebCredentialRecord
+} from './identity-store.ts';
 export { RevisionConflictError } from './errors.ts';
 export { createPostgresCommandTransactionPort } from './postgres-command-transaction.ts';
 export type {

@@ -66,9 +66,40 @@ This file is a **rule authority registry**, not gameplay implementation. It repl
 | `RULE-PROVENANCE` | Rule Preservation Protocol | LOCKED PROCESS |
 | `RULE-RULE-CHANGES` | Local Snapshot Warning | LOCKED PROCESS |
 
+## Owner-approved normal-turn corrections — 2026-09-21
+
+These clauses are **LOCKED owner corrections**. They supersede any older donor/runtime behavior that conflicts with them and belong to the existing `RULE-OPENING`, `RULE-ACQUISITION`, `RULE-TURN`, `RULE-NUMBER`, and `RULE-DRAW` authority.
+
+### Special cards played from hand
+
+1. On a player's own normal turn, when the current top card on the **Play pile** is **not** a Special card, that player may play a Special card from their hand **regardless of the color or number** of the card that was played before them.
+2. For this rule, **Special card** means any canonical non-`number` card family. **Regular card** means a canonical `number` card.
+3. A player may **not** play a Special card from their hand immediately on top of a Special card that was played by the immediately preceding player.
+4. When the Play pile top is such a preceding-player Special card, the current player must either:
+   - play a Regular/`number` card that is otherwise legal under the ordinary Number/turn rules; or
+   - draw a card.
+5. This correction governs normal hand-play eligibility. It does not change the separate forced-on-draw rules for cards that auto-play when drawn, and it does not replace any family-specific Special-card resolution after a Special card is legally played.
+
+### Voluntary draw even when a legal play exists
+
+1. A player is **not forced to play a card from their hand merely because they have a legal match**.
+2. On their normal turn, the player may choose to **skip playing from hand and draw a card instead**, even when one or more legal hand plays exist.
+3. The presence of a legal playable card must therefore never disable the normal Draw choice by itself.
+4. A voluntary normal draw **automatically ends that player's ordinary turn**. A normally drawn card is added to the player's hand and cannot be voluntarily played during that same turn.
+5. If the voluntarily drawn card is subject to a separate forced-on-draw rule, its mandatory forced resolution still occurs immediately. After that forced resolution/continuation completes, turn progression follows the forced card's explicit rule; absent such an explicit exception, the drawing player's turn ends.
+6. This resolves only the voluntary normal-draw continuation. It does **not** silently resolve any separate turn-loss detail belonging to the special `DRAW` card family.
+
+### Opening deal is not a forced draw
+
+1. The initial **7-card opening deal** is game setup, not a post-start draw action.
+2. A player may receive Special cards in their initial 7-card hand.
+3. Any Special card received during the opening deal **stays in that player's hand**. It does **not** auto-trigger, auto-play, reveal, or begin its Special-card effect merely because it was dealt.
+4. Forced-on-draw behavior begins only for qualifying cards acquired **after the game has started** through an actual draw, penalty draw, or other post-start acquisition that the applicable rule classifies as forced-on-draw.
+5. A Special card that entered the hand during the opening deal may later be played from hand according to the normal hand-play eligibility rules, including the rule that a Special card from hand cannot be stacked directly on a Special card played by the immediately preceding player.
+
 ## Explicit unresolved registry
 
-The following remain unresolved and **must not receive implementation defaults** during P1 or by convenience in later phases: Draw turn loss; Taboo timeout; Hijack final-card boundary; TAG nesting; group-Dare refusal and instigator participation; Chaos weights, short-hand behavior and left behavior; Paranoia Spreads probabilities; Ghost penalty and old attack details; DIG ME refusal; Reverse Confession final response/resolution; Nope eligibility for Truth or Chaos; extra Chaos catalogue; Pulse tuning; and any other clause explicitly identified as unresolved in the clean authority documents.
+The following remain unresolved and **must not receive implementation defaults** during P1 or by convenience in later phases: special Draw-card-family turn-loss detail; Taboo timeout; Hijack final-card boundary; TAG nesting; group-Dare refusal and instigator participation; Chaos weights, short-hand behavior and left behavior; Paranoia Spreads probabilities; Ghost penalty and old attack details; DIG ME refusal; Reverse Confession final response/resolution; Nope eligibility for Truth or Chaos; extra Chaos catalogue; Pulse tuning; and any other clause explicitly identified as unresolved in the clean authority documents.
 
 ## P1 architecture invariants relevant to future rules
 
