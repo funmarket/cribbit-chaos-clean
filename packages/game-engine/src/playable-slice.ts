@@ -167,20 +167,30 @@ function withAdvancedTurn(state: CanonicalGameState, actorPlayerId: PlayerId): C
 }
 
 function isActorTurn(state: CanonicalGameState, actorPlayerId: PlayerId): boolean {
-  return phaseOf(state) === 'active' && state.turn?.currentPlayerId === actorPlayerId && state.winnerBoundary.status !== 'declared';
+  return phaseOf(state) === 'active' && state.rootFlow === null && state.turn?.currentPlayerId === actorPlayerId && state.winnerBoundary.status !== 'declared';
 }
-
-export function isLegalOrdinaryCardPlay(state: CanonicalGameState, playerId: PlayerId, cardInstanceId: CardInstanceId): boolean {
+export function isLegalCardPlay(state: CanonicalGameState, playerId: PlayerId, cardInstanceId: CardInstanceId): boolean {
   if (!isActorTurn(state, playerId)) return false;
   if (!handFor(state, playerId).includes(cardInstanceId)) return false;
   const card = cardsById.get(cardInstanceId);
-  if (!card || card.family !== 'number') return false;
+  if (!card) return false;
   const topDiscardId = state.zones.discardPile.at(-1);
   if (!topDiscardId) return false;
   const topDiscard = cardsById.get(topDiscardId);
-  if (!topDiscard || topDiscard.family !== 'number') return false;
+  if (!topDiscard) return false;
+  if (card.family !== 'number') return topDiscard.family === 'number';
+  if (topDiscard.family !== 'number') {
+    const priorNumber = [...state.zones.discardPile].reverse()
+      .map((id) => cardsById.get(id))
+      .find((candidate) => candidate?.family === 'number');
+    return Boolean(priorNumber && (card.color === state.turn?.activeColor || card.value === priorNumber.value));
+  }
   return card.color === state.turn?.activeColor || card.value === topDiscard.value;
 }
+export function isLegalNumberCardPlay(state: CanonicalGameState, playerId: PlayerId, cardInstanceId: CardInstanceId): boolean {
+  return cardsById.get(cardInstanceId)?.family === 'number' && isLegalCardPlay(state, playerId, cardInstanceId);
+}
+export const isLegalOrdinaryCardPlay = isLegalCardPlay;
 
 function drawCardDefinition(): EngineTransitionDefinition<DrawCardCommandPayload, { readonly actorPlayerId: PlayerId }, EngineEffect> {
   return {
@@ -211,10 +221,13 @@ function playCardDefinition(): EngineTransitionDefinition<PlayCardCommandPayload
     apply({ state, command, authoritativeInputs }) {
       const actorPlayerId = authoritativeInputs.actorPlayerId;
       if (!isActorTurn(state, actorPlayerId)) return { status: 'rejected', reason: 'NOT_CURRENT_TURN' };
-      if (!isLegalOrdinaryCardPlay(state, actorPlayerId, command.cardInstanceId)) return { status: 'rejected', reason: 'ILLEGAL_ORDINARY_PLAY' };
       const card = cardsById.get(command.cardInstanceId);
-      if (!card || card.family !== 'number') return { status: 'rejected', reason: 'ONLY_NUMBER_CARDS_SUPPORTED' };
+      if (!card) return { status: 'rejected', reason: 'UNKNOWN_CARD_INSTANCE' };
+      if (!isLegalCardPlay(state, actorPlayerId, command.cardInstanceId)) {
+        return { status: 'rejected', reason: card.family === 'number' ? 'ILLEGAL_ORDINARY_PLAY' : 'ILLEGAL_CARD_PLAY' };
+      }
       const nextHand = handFor(state, actorPlayerId).filter((cardId) => cardId !== command.cardInstanceId);
+      const isSpecial = card.family !== 'number';
       const nextBase: CanonicalGameState = {
         ...state,
         zones: {
@@ -222,13 +235,25 @@ function playCardDefinition(): EngineTransitionDefinition<PlayCardCommandPayload
           hands: { ...state.zones.hands, [actorPlayerId]: nextHand },
           discardPile: [...state.zones.discardPile, command.cardInstanceId]
         },
-        turn: state.turn ? { ...state.turn, activeColor: card.color as CardColor } : state.turn,
-        winnerBoundary: nextHand.length === 0 ? { status: 'declared', winnerPlayerId: actorPlayerId } : state.winnerBoundary,
-        lifecycle: nextHand.length === 0 ? { phase: 'resolved', hostPlayerId: state.lifecycle?.hostPlayerId ?? null } : state.lifecycle
+        turn: state.turn ? { ...state.turn, ...(card.family === 'number' ? { activeColor: card.color as CardColor } : {}) } : state.turn,
+        rootFlow: isSpecial ? {
+          rootFlowId: `special:${state.gameId}:${state.revision}:${command.cardInstanceId}`,
+          stage: {
+            stageId: `special-stage:${state.gameId}:${state.revision}:${command.cardInstanceId}`,
+            eligibleParticipantIds: [actorPlayerId],
+            acceptedSubmissions: [],
+            pendingParticipantIds: [actorPlayerId],
+            deadlineId: null,
+            completionPolicyRef: `SPECIAL_RESOLUTION:${card.family}`
+          },
+          continuationIds: []
+        } : null,
+        winnerBoundary: !isSpecial && nextHand.length === 0 ? { status: 'declared', winnerPlayerId: actorPlayerId } : state.winnerBoundary,
+        lifecycle: !isSpecial && nextHand.length === 0 ? { phase: 'resolved', hostPlayerId: state.lifecycle?.hostPlayerId ?? null } : state.lifecycle
       };
       return {
         status: 'accepted',
-        state: nextHand.length === 0 ? nextBase : withAdvancedTurn(nextBase, actorPlayerId),
+        state: !isSpecial && nextHand.length === 0 ? nextBase : isSpecial ? nextBase : withAdvancedTurn(nextBase, actorPlayerId),
         effects: [{ kind: 'CARD_PLAYED', playerId: actorPlayerId, cardInstanceId: command.cardInstanceId }]
       };
     }
@@ -268,7 +293,7 @@ export function projectGameView(state: CanonicalGameState, playerId: PlayerId): 
   const winner = winnerBoundary.status === 'declared'
     ? state.players.find((candidate) => candidate.playerId === winnerBoundary.winnerPlayerId) ?? null
     : null;
-  const playableCardIds = handFor(state, playerId).filter((cardId) => isLegalOrdinaryCardPlay(state, playerId, cardId));
+  const playableCardIds = handFor(state, playerId).filter((cardId) => isLegalCardPlay(state, playerId, cardId));
   return {
     source: 'server',
     sessionId: state.gameId,
@@ -300,7 +325,7 @@ export function projectGameView(state: CanonicalGameState, playerId: PlayerId): 
     activeColor: turn?.activeColor ?? null,
     direction: turn?.direction ?? 'clockwise',
     currentTurnPlayerId: turn?.currentPlayerId ?? null,
-    activeEffect: null,
+    activeEffect: state.rootFlow?.stage.completionPolicyRef ?? null,
     turnLabel: phase === 'waiting'
       ? 'Waiting for players'
       : winner
