@@ -1,6 +1,6 @@
 # ENG-001 — Canonical Mechanics and Authority Matrix
 
-**Status:** IN PROGRESS  
+**Status:** PASS
 **Task:** `ENG-001`  
 **Purpose:** classify canonical gameplay authority, current CLEAN support, donor evidence, and the next port/adapt/rewrite decision before engine implementation.
 
@@ -28,7 +28,7 @@ The inspected active branch (`work-old-ui-full-extract` at `dc97515c82e483bb4636
 - no complete special-family transition implementation in the clean engine;
 - no donor runtime imported as gameplay authority.
 
-`ENG-001` is classification only. It does not claim the current P7A slice is complete and does not change infrastructure, persistence, deployment, UI, or gameplay behavior.
+`ENG-001` is complete classification only. It does not claim the current P7A slice is complete and does not change infrastructure, persistence, deployment, UI, or gameplay behavior. The broad owner correction that defines a Special as any non-`number` family is reconciled with the more specific `RULE-NOPE` narrow-role authority: Nope remains reaction-only until a typed `PLAY_NOPE` path exists. ENG-002 must separate canonical eligibility from currently executable family transitions and must fail closed for unresolved Special effects.
 
 ## Matrix
 
@@ -87,7 +87,7 @@ The inspected active branch (`work-old-ui-full-extract` at `dc97515c82e483bb4636
 
 ## ENG-001 conclusion
 
-The matrix confirms Codex’s diagnosis: the clean application has a real single-authority path, but its current engine is a deliberately incomplete P7A slice. Simulation is not a second engine; it is correctly exercising the same incomplete path. The next implementation task is `ENG-002 — Canonical normal-turn legality`, beginning with special-card legality, voluntary draw capability, Wild selection contracts, and behavior tests. No unresolved rule is assigned a guessed default by this matrix.
+The matrix confirms Codex’s diagnosis: the clean application has a real single-authority path, but its current engine is a deliberately incomplete P7A slice. Simulation is not a second engine; it is correctly exercising the same incomplete path. The next implementation task is `ENG-002 — Canonical normal-turn legality`, covering opening setup, Number legality, generic hand eligibility, voluntary Draw, and the capability/executability distinction. Wild family resolution and `SELECT_WILD_COLOR` remain ENG-003 work. No unresolved rule is assigned a guessed default by this matrix.
 
 ## Required transfer impact
 
