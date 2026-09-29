@@ -80,6 +80,10 @@ export function bootstrap(root: HTMLElement, platform: PlatformAdapter, options:
     if (pollHandle !== null || !state.player) return;
     pollHandle = window.setInterval(() => { void refreshProjection(); }, 1500);
   };
+  const openWebGameView = (): void => {
+    if (platform.kind !== 'web') return;
+    root.querySelector<HTMLElement>('[data-nav="game"]')?.click();
+  };
 
   const withBusy = async (operation: () => Promise<void>): Promise<void> => {
     setState({ busy: true, error: null });
@@ -130,6 +134,7 @@ export function bootstrap(root: HTMLElement, platform: PlatformAdapter, options:
       };
       ensurePolling();
       updatePresentation();
+      openWebGameView();
     });
   };
 
@@ -144,8 +149,8 @@ export function bootstrap(root: HTMLElement, platform: PlatformAdapter, options:
     if (!player) return;
     void withBusy(async () => {
       const projection = await api.startGame(player.sessionId);
-      if (platform.kind === 'web') webView = 'game';
       setState({ projection });
+      openWebGameView();
     });
   };
 

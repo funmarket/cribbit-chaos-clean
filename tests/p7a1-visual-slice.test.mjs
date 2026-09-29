@@ -280,6 +280,8 @@ test('Start simulated game uses the clean server API and the normal command hand
   assert.doesNotMatch(clientSource, /simulationProjection|createFixturePreview\(\)\.projection/);
   assert.match(clientSource, /mountGameTable\(target, state\.projection, \{ onDraw: drawCard, onPlay: playCard \}, 'telegram'\)/);
   assert.match(clientSource, /updateWebPresentation\(root,/);
+  assert.match(clientSource, /const openWebGameView = \(\): void/);
+  assert.match(clientSource, /root\.querySelector<HTMLElement>\('\[data-nav="game"\]'\)\?\.click\(\)/);
   assert.doesNotMatch(clientSource, /legacy-runtime|canonical-game-runtime|@cribbit\/game-engine/);
 });
 
