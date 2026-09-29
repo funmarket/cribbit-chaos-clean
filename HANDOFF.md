@@ -2716,7 +2716,9 @@ PR #13 is the source-of-truth completion record. Completion commit: `d78764dfbe8
 
 ### `ENG-002` - Core legality and matching
 
-**Status:** `NOT STARTED`
+**Status:** `IN PROGRESS`
+
+Current implementation branch: `task/ENG-002-normal-turn-legality`. The clean engine now separates canonical normal-turn eligibility from executable capability, keeps voluntary Draw available with legal plays, blocks direct Special stacking after a preceding Special, preserves the narrow RULE-NOPE role, and fails closed for unsupported Special-family commands without mutating discard, flow, or turn state. Public projection exposes only executable capabilities and no internal completion-policy markers. Number matching beneath a preceding Special is fail-closed to the persistent active color because the authority set does not prove transparent value matching. Focused tests and typecheck remain required after this correction; hosted proof and PR review are outstanding.
 
 Port/adapt tested donor legality where compatible.
 
@@ -3469,7 +3471,8 @@ Agents append concise evidence rows. Do not turn this into a chat transcript.
 | 2026-09-21 | DOC-REBASE-001 | PASS | Whole-product scope, Control Room architecture, live Documentation Sync Gate, authority guards and schema/domain roadmap introduced in current docs-only rebaseline | No gameplay rule/source, DB migration, Railway/Cloudflare, `main`, merge or production mutation belongs to this documentation task. |
 | 2026-09-21 | RULE-TURN / RULE-ACQUISITION | PASS | `gamerules.md` commit `2f0e8fe853321d81ad59defd8ba762f79c4c5712` | Owner locked voluntary normal draw as always available and turn-ending; initial 7-card opening deal may contain Special cards which stay in hand and do not auto-trigger. Separate special `DRAW` card-family turn-loss detail remains unresolved. |
 | 2026-09-21 | UI-RULE-SYNC | PASS | `packages/ui/src/game-table.ts` commit `3b1937676e77d758b4a356cfe9ca85640b20d5f3` | Focused contradiction audit found the donor QA knob defaulted voluntary draw off while CLEAN engine already permits draw with legal matches and advances turn. Active CLEAN presentation now shows the canonical rule as enabled/locked; donor evidence remains untouched. Audit also confirmed current CLEAN playable slice still rejects non-number `PLAY_CARD`, so owner-approved Special-card-from-hand legality is documented but not yet implemented. |
-| 2026-09-29 | ENG-001 | PASS | PR #13; completion commit `d78764dfbe85c9e771f9cab721532cbb2dfd84f3`; matrix `docs/engine-mechanics-matrix.md`; documentation diff check PASS | Owner explicitly reprioritized source-only canonical engine recovery. Classification confirms CLEAN has one authoritative but incomplete P7A path; donor code/tests remain evidence only. No Railway, PostgreSQL, Cloudflare, deployment, schema, or gameplay mutation performed. ENG-002 is separate and remains unmerged. |
+| 2026-09-29 | ENG-001 | PASS | PR #13; completion commit `85ef02719a6db6e95eecac1d922adab8fc54a3b6`; matrix `docs/engine-mechanics-matrix.md`; documentation diff check PASS | Owner explicitly reprioritized source-only canonical engine recovery. Classification confirms CLEAN has one authoritative but incomplete P7A path; donor code/tests remain evidence only. No Railway, PostgreSQL, Cloudflare, deployment, schema, or gameplay mutation performed. ENG-002 is separate and remains unmerged. |
+| 2026-09-29 | ENG-002 | IN PROGRESS | Branch `task/ENG-002-normal-turn-legality`; correction pass complete locally and awaiting stacked merge/hosted proof | ENG-002 separates canonical eligibility from executable capability, preserves RULE-NOPE narrow authority, fails closed for unsupported Special families, avoids active-effect discard mutation, and keeps internal flow identifiers out of the public projection. No Railway, PostgreSQL, Cloudflare, deployment, schema, or production mutation performed. |
 
 ---
 
