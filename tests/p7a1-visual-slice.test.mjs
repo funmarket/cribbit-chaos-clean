@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { createFixturePreview } from '../packages/client-app/src/fixture-preview.ts';
 import { createPresentationState, renderCribbitHome, renderCribbitLobby, renderGameTable } from '../packages/ui/src/game-table.ts';
+import { WEB_GAME_TABLE_STYLES } from '../packages/ui/src/styles.ts';
 
 function orderedMarkers(html, markers) {
   let cursor = -1;
@@ -189,6 +190,8 @@ test('Web shell and live game keep the extracted old template structure active',
   assert.match(lobbyHtml, /data-view="lobby"/);
   assert.match(lobbyHtml, /data-view="game"/);
   assert.match(OLD_PACKAGES_UI_SRC_TEMPLATE_HTML, /id="drawPileVisual"/);
+  assert.match(WEB_GAME_TABLE_STYLES, /\.cribbit-clean-web-table \.desktop-discard \.game-card--mini\{width:min\(94px,100%\);height:auto;max-height:100%;aspect-ratio:5\/7\}/);
+  assert.match(WEB_GAME_TABLE_STYLES, /\.cribbit-clean-web-table \.desktop-draw-pile\{min-width:0;min-height:0;max-height:100%;aspect-ratio:5\/7\}/);
   assert.doesNotMatch(gameHtml, /cribbit-clean-web-table|Old UI surface; clean API commands underneath|Railway authority/);
 });
 
