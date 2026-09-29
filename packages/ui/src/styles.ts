@@ -27,10 +27,10 @@ const CLEAN_BINDING_ADAPTER_CSS = String.raw`
 .cribbit-clean-lobby-actions{display:flex;flex-wrap:wrap;gap:10px;margin-top:12px}
 .cribbit-clean-lobby-actions .button:disabled,.cribbit-clean-lobby-actions .tg-button:disabled{opacity:.5;cursor:not-allowed}
 .cribbit-clean-web-table .desktop-gameboard,.cribbit-clean-web-table .desktop-play-grid,.cribbit-clean-web-table .game-layout{min-width:0}
-.cribbit-clean-web-table .desktop-discard{min-width:0;min-height:0;max-height:100%}
-.cribbit-clean-web-table .desktop-discard > .game-card,.cribbit-clean-web-table .desktop-discard .game-card--mini{width:min(94px,100%);height:auto;max-height:100%;aspect-ratio:5/7}
-.cribbit-clean-web-table .desktop-discard .cc-canonical-card-face{display:block;max-width:100%;max-height:100%;object-fit:cover}
-.cribbit-clean-web-table .desktop-draw-pile{min-width:0;min-height:0;max-height:100%;aspect-ratio:5/7}
+[data-view="game"] .desktop-discard{min-width:0;min-height:0;max-height:100%}
+[data-view="game"] .desktop-discard > .game-card,[data-view="game"] .desktop-discard .game-card--mini{width:min(94px,100%);height:auto;max-height:100%;aspect-ratio:5/7}
+[data-view="game"] .desktop-discard .cc-canonical-card-face{display:block;max-width:100%;max-height:100%;object-fit:cover}
+[data-view="game"] .desktop-draw-pile{min-width:0;min-height:0;max-height:100%;aspect-ratio:5/7}
 .cribbit-clean-web-table .game-card__art,.cribbit-clean-telegram-table .game-card__art{display:block;width:100%;height:100%;object-fit:contain;user-select:none;-webkit-user-drag:none}
 .cribbit-clean-web-table .game-card--tg-hand,.cribbit-clean-web-table .game-card--tg-board{border-radius:inherit}
 .cribbit-clean-web-table .tg-safety-bar,.cribbit-clean-telegram-table .tg-safety-bar{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:6px}

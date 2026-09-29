@@ -189,9 +189,13 @@ test('Web shell and live game keep the extracted old template structure active',
   orderedMarkers(gameHtml, ['id="leftRail"', 'id="gameStage"', 'class="desktop-gameboard"', 'id="discardSlot"', 'id="drawPileVisual"', 'id="handScroll"', 'class="desktop-safety-bar"', 'id="rightRail"', 'id="activityDock"']);
   assert.match(lobbyHtml, /data-view="lobby"/);
   assert.match(lobbyHtml, /data-view="game"/);
-  assert.match(OLD_PACKAGES_UI_SRC_TEMPLATE_HTML, /id="drawPileVisual"/);
-  assert.match(WEB_GAME_TABLE_STYLES, /\.cribbit-clean-web-table \.desktop-discard \.game-card--mini\{width:min\(94px,100%\);height:auto;max-height:100%;aspect-ratio:5\/7\}/);
-  assert.match(WEB_GAME_TABLE_STYLES, /\.cribbit-clean-web-table \.desktop-draw-pile\{min-width:0;min-height:0;max-height:100%;aspect-ratio:5\/7\}/);
+  assert.match(OLD_PACKAGES_UI_SRC_TEMPLATE_HTML, /<section class="view" data-view="game"[\s\S]*?<div class="game-app-shell"[\s\S]*?<div class="desktop-discard" id="discardSlot"[\s\S]*?<button class="desktop-draw-pile" id="drawPileVisual"/);
+  assert.match(gameHtml, /<section class="view is-active" data-view="game"[\s\S]*?<div class="desktop-discard" id="discardSlot"/);
+  assert.match(gameHtml, /<button class="desktop-draw-pile" id="drawPileVisual"/);
+  assert.match(WEB_GAME_TABLE_STYLES, /\[data-view="game"\] \.desktop-discard > \.game-card,\[data-view="game"\] \.desktop-discard \.game-card--mini\{width:min\(94px,100%\);height:auto;max-height:100%;aspect-ratio:5\/7\}/);
+  assert.match(WEB_GAME_TABLE_STYLES, /\[data-view="game"\] \.desktop-discard \.cc-canonical-card-face\{display:block;max-width:100%;max-height:100%;object-fit:cover\}/);
+  assert.match(WEB_GAME_TABLE_STYLES, /\[data-view="game"\] \.desktop-draw-pile\{min-width:0;min-height:0;max-height:100%;aspect-ratio:5\/7\}/);
+  assert.doesNotMatch(WEB_GAME_TABLE_STYLES, /\.cribbit-clean-web-table \.desktop-(?:discard|draw-pile)/);
   assert.doesNotMatch(gameHtml, /cribbit-clean-web-table|Old UI surface; clean API commands underneath|Railway authority/);
 });
 
