@@ -2712,6 +2712,8 @@ Create a permanent in-handoff or approved docs matrix mapping:
 
 This task is read-only classification.
 
+PR #13 is the source-of-truth completion record. Exact head: `2544bcf14b6c3a5a18f5d77f2efaec1c73e8f3f6`. ENG-002 remains a separate implementation task and is not included in this PR.
+
 ### `ENG-002` - Core legality and matching
 
 **Status:** `IN PROGRESS`
@@ -3469,8 +3471,8 @@ Agents append concise evidence rows. Do not turn this into a chat transcript.
 | 2026-09-21 | DOC-REBASE-001 | PASS | Whole-product scope, Control Room architecture, live Documentation Sync Gate, authority guards and schema/domain roadmap introduced in current docs-only rebaseline | No gameplay rule/source, DB migration, Railway/Cloudflare, `main`, merge or production mutation belongs to this documentation task. |
 | 2026-09-21 | RULE-TURN / RULE-ACQUISITION | PASS | `gamerules.md` commit `2f0e8fe853321d81ad59defd8ba762f79c4c5712` | Owner locked voluntary normal draw as always available and turn-ending; initial 7-card opening deal may contain Special cards which stay in hand and do not auto-trigger. Separate special `DRAW` card-family turn-loss detail remains unresolved. |
 | 2026-09-21 | UI-RULE-SYNC | PASS | `packages/ui/src/game-table.ts` commit `3b1937676e77d758b4a356cfe9ca85640b20d5f3` | Focused contradiction audit found the donor QA knob defaulted voluntary draw off while CLEAN engine already permits draw with legal matches and advances turn. Active CLEAN presentation now shows the canonical rule as enabled/locked; donor evidence remains untouched. Audit also confirmed current CLEAN playable slice still rejects non-number `PLAY_CARD`, so owner-approved Special-card-from-hand legality is documented but not yet implemented. |
-| 2026-09-29 | ENG-001 | IN PROGRESS | `task/ENG-001-donor-mechanics-matrix` at `dc97515c82e483bb46364db9a44881245c204d08`; matrix `docs/engine-mechanics-matrix.md` | Owner explicitly reprioritized source-only canonical engine recovery. Classification confirms CLEAN has one authoritative but incomplete P7A path; donor code/tests remain evidence only. No Railway, PostgreSQL, Cloudflare, deployment, schema, or gameplay mutation performed. |
-| 2026-09-29 | ENG-001 / ENG-002 | ENG-001 PASS; ENG-002 IN PROGRESS | ENG-001 PR #13; ENG-002 branch `task/ENG-002-normal-turn-legality`; focused tests 22 pass, 1 existing hosted test skipped; `npm run typecheck` PASS | ENG-002 implements locked opening/normal-turn eligibility and an explicit unresolved-special boundary. No Special-family effect semantics, Railway, PostgreSQL, Cloudflare, deployment, schema, or production mutation performed. |
+| 2026-09-29 | ENG-001 | PASS | PR #13; head `2544bcf14b6c3a5a18f5d77f2efaec1c73e8f3f6`; matrix `docs/engine-mechanics-matrix.md`; documentation diff check PASS | Owner explicitly reprioritized source-only canonical engine recovery. Classification confirms CLEAN has one authoritative but incomplete P7A path; donor code/tests remain evidence only. No Railway, PostgreSQL, Cloudflare, deployment, schema, or gameplay mutation performed. ENG-002 is separate and remains unmerged. |
+| 2026-09-29 | ENG-002 | IN PROGRESS | Branch `task/ENG-002-normal-turn-legality`; correction pass in progress after review of PR #14; prior focused tests passed before correction; no hosted proof | ENG-002 is being corrected to separate canonical eligibility from executable capability, preserve RULE-NOPE narrow authority, fail closed for unsupported Special families, avoid active-effect discard mutation, and keep internal flow identifiers out of the public projection. No Railway, PostgreSQL, Cloudflare, deployment, schema, or production mutation performed. |
 
 ---
 
