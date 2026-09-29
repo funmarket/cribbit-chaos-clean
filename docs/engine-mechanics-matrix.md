@@ -70,7 +70,7 @@ The inspected active branch (`work-old-ui-full-extract` at `dc97515c82e483bb4636
 | `RULE-GHOST` | NEW LOCKED CORE / DETAILS UNRESOLVED | Not implemented in clean P7A | Donor `reducer.ts`, `capabilities.ts`, core tests | Penalty and old attack details unresolved | Later focused flow; preserve armed/active concepts only where locked |
 | `RULE-DIG-ME` | LOCKED CORE | Not implemented in clean P7A | Donor `social.ts`, core tests | Refusal/final details unresolved; no Roulette default | Later domain handler |
 | `RULE-REVERSE-CONFESSION` | LOCKED CORE / RESOLUTION UNRESOLVED | Not implemented in clean P7A | Donor `social.ts`, core tests | Downstream response/resolution unresolved | Later focused flow; stop at locked boundary |
-| `RULE-NOPE` | NEW NARROW ROLE | Not implemented in clean P7A | Donor `command-router.ts`, `nope-routing.test.ts`, `capabilities.ts` | Eligibility for unresolved families remains unresolved | Later typed `PLAY_NOPE`; no broad reaction authority |
+| `RULE-NOPE` | NEW NARROW ROLE | Not implemented in clean P7A; excluded from generic normal-play eligibility | Donor `command-router.ts`, `nope-routing.test.ts`, `capabilities.ts` | Broad Special wording conflicts with this more-specific narrow reaction role; `RULE-NOPE` wins until typed `PLAY_NOPE` exists | Later typed `PLAY_NOPE`; no broad reaction authority |
 | `RULE-PASS` | LOCKED WHERE SPECIFIED | Not implemented in clean P7A | Donor `reducer.ts`, social tests | Refusal semantics vary by family and some are unresolved | Family handlers own exact pass behavior |
 | `RULE-REWIND` | LOCKED | Not implemented in clean P7A | Donor `reducer.ts`, core tests | Must not mutate client state directly | Later engine command with explicit eligibility |
 | `RULE-FLAG` | LOCKED | Not implemented in clean P7A | Donor safety/content paths | Moderation is a separate domain; no gameplay shortcut | API safety/moderation owner |
@@ -87,7 +87,7 @@ The inspected active branch (`work-old-ui-full-extract` at `dc97515c82e483bb4636
 
 ## ENG-001 conclusion
 
-The matrix confirms Codex’s diagnosis: the clean application has a real single-authority path, but its current engine is a deliberately incomplete P7A slice. Simulation is not a second engine; it is correctly exercising the same incomplete path. The next implementation task is `ENG-002 — Canonical normal-turn legality`, covering opening setup, Number legality, generic hand eligibility, voluntary Draw, and the capability/executability distinction. Wild family resolution and `SELECT_WILD_COLOR` remain ENG-003 work. No unresolved rule is assigned a guessed default by this matrix.
+The matrix confirms Codex’s diagnosis: the clean application has a real single-authority path, but its current engine is a deliberately incomplete P7A slice. Simulation is not a second engine; it is correctly exercising the same incomplete path. ENG-002 must distinguish canonical hand eligibility from executable capabilities: unsupported Special families may be classified as eligible where the specific family authority allows, but must not be advertised or accepted as executable commands until their family transition exists. Wild family resolution and `SELECT_WILD_COLOR` remain ENG-003 work. No unresolved rule is assigned a guessed default by this matrix.
 
 ## Required transfer impact
 
