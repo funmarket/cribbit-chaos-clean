@@ -83,15 +83,16 @@ export function createMemorySessionStore() {
       };
     },
 
-    async joinSession(input: { readonly sessionId: string; readonly principalId: string; readonly playerId: string; readonly displayName: string }): Promise<SessionStoreResult<CreatedSessionRecord>> {
+    async joinSession(input: { readonly sessionId: string; readonly principalId: string; readonly displayName: string }): Promise<SessionStoreResult<CreatedSessionRecord>> {
       const session = sessions.get(input.sessionId);
       if (!session) return { status: 'rejected', reason: 'SESSION_NOT_FOUND' };
       if (session.members.some((entry) => entry.principalId === input.principalId)) return { status: 'rejected', reason: 'PLAYER_ALREADY_JOINED' };
-      const added = addWaitingPlayer({ state: session.state, playerId: input.playerId, displayName: input.displayName });
+      const playerId = `p${session.members.length + 1}`;
+      const added = addWaitingPlayer({ state: session.state, playerId, displayName: input.displayName });
       if (added.status === 'rejected') return { status: 'rejected', reason: added.reason };
       session.state = added.state;
-      session.members.push({ principalId: input.principalId, playerId: input.playerId, displayName: input.displayName });
-      return { status: 'accepted', value: { sessionId: input.sessionId, playerId: input.playerId, projection: projectGameView(session.state, input.playerId) } };
+      session.members.push({ principalId: input.principalId, playerId, displayName: input.displayName });
+      return { status: 'accepted', value: { sessionId: input.sessionId, playerId, projection: projectGameView(session.state, playerId) } };
     },
 
     async loadForPrincipal(sessionId: string, principalId: string): Promise<LoadedPlayerSession | null> {
@@ -114,9 +115,6 @@ export function createMemorySessionStore() {
       return { status: 'accepted', value: { projection: projectGameView(session.state, member.playerId) } };
     },
 
-    memberCount(sessionId: string): number {
-      return sessions.get(sessionId)?.members.length ?? 0;
-    }
   };
 }
 

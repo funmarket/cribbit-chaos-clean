@@ -137,7 +137,7 @@ export function createPostgresSessionStore(pool: Pool) {
       } finally { client.release(); }
     },
 
-    async joinSession(input: { readonly sessionId: string; readonly principalId: string; readonly playerId: string; readonly displayName: string }): Promise<SessionStoreResult<LoadedPlayerSession>> {
+    async joinSession(input: { readonly sessionId: string; readonly principalId: string; readonly displayName: string }): Promise<SessionStoreResult<LoadedPlayerSession>> {
       const client = await pool.connect();
       try {
         await client.query('begin');
@@ -148,15 +148,16 @@ export function createPostgresSessionStore(pool: Pool) {
           [input.sessionId, input.principalId]
         );
         if (existing.rowCount) { await client.query('rollback'); return { status: 'rejected', reason: 'PLAYER_ALREADY_JOINED' }; }
-        const next = addWaitingPlayer({ state, playerId: input.playerId, displayName: input.displayName });
+        const playerId = `p${state.players.length + 1}`;
+        const next = addWaitingPlayer({ state, playerId, displayName: input.displayName });
         if (next.status === 'rejected') { await client.query('rollback'); return next; }
         await updateState(client, next.state, state.revision);
         await client.query(
           'insert into game_session_memberships (session_id, principal_id, player_id) values ($1, $2, $3)',
-          [input.sessionId, input.principalId, input.playerId]
+          [input.sessionId, input.principalId, playerId]
         );
         await client.query('commit');
-        return { status: 'accepted', value: { playerId: input.playerId, state: next.state, projection: projectGameView(next.state, input.playerId) } };
+        return { status: 'accepted', value: { playerId, state: next.state, projection: projectGameView(next.state, playerId) } };
       } catch (error) {
         try { await client.query('rollback'); } catch {}
         throw error;
@@ -203,12 +204,5 @@ export function createPostgresSessionStore(pool: Pool) {
       } finally { client.release(); }
     },
 
-    async memberCount(sessionId: string): Promise<number> {
-      const result = await pool.query<{ count: string }>(
-        'select count(*) from game_session_memberships where session_id = $1',
-        [sessionId]
-      );
-      return Number(result.rows[0]?.count ?? 0);
-    }
   };
 }

@@ -5,12 +5,17 @@ declare global {
     Telegram?: {
       WebApp?: {
         initData?: string;
+        ready?: () => void;
+        expand?: () => void;
       };
     };
   }
 }
 
 export function createTelegramAdapter(): PlatformAdapter {
+  const webApp = window.Telegram?.WebApp;
+  webApp?.ready?.();
+  webApp?.expand?.();
   return {
     kind: 'telegram',
     getAuthHeaders() {

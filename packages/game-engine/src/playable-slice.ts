@@ -120,7 +120,11 @@ export function startPlayableGame(input: {
 }): { readonly status: 'accepted'; readonly state: CanonicalGameState } | { readonly status: 'rejected'; readonly reason: string } {
   if (phaseOf(input.state) !== 'waiting') return { status: 'rejected', reason: 'SESSION_ALREADY_STARTED' };
   if (input.state.players.length < 2) return { status: 'rejected', reason: 'START_REQUIRES_TWO_PLAYERS' };
-  if (new Set(input.shuffledDeck).size !== CANONICAL_CARD_INSTANCES.length) return { status: 'rejected', reason: 'INVALID_DECK_ORDER' };
+  if (input.shuffledDeck.length !== CANONICAL_CARD_INSTANCES.length) return { status: 'rejected', reason: 'INVALID_DECK_ORDER' };
+  const canonicalIds = new Set(CANONICAL_CARD_INSTANCES.map((card) => card.instanceId));
+  if (new Set(input.shuffledDeck).size !== canonicalIds.size || input.shuffledDeck.some((cardId) => !canonicalIds.has(cardId))) {
+    return { status: 'rejected', reason: 'INVALID_DECK_ORDER' };
+  }
 
   const hands: Record<PlayerId, CardInstanceId[]> = Object.fromEntries(input.state.players.map((player) => [player.playerId, []]));
   let cursor = 0;

@@ -57,3 +57,31 @@ test('runtime still rejects unrelated catch-all routes', async () => {
     assert.equal(await response.text(), '');
   });
 });
+
+test('disallowed Origins are rejected for normal requests, not only preflight', async () => {
+  const handler = createNodeApiHandler({
+    databaseUrl: 'postgres://app-role@db/cribbit',
+    checkConnection: async () => {},
+    frontendOrigins: ['https://cribbit.example']
+  });
+
+  await withServer(handler, async (baseUrl) => {
+    const response = await fetch(`${baseUrl}/api/auth/web/guest`, {
+      method: 'POST',
+      headers: { origin: 'https://attacker.example', 'content-type': 'application/json' },
+      body: JSON.stringify({ displayName: 'Attacker' })
+    });
+    assert.equal(response.status, 403);
+  });
+});
+
+test('production runtime fails closed without database and session configuration', () => {
+  assert.throws(
+    () => createNodeApiHandler({ databaseUrl: '', checkConnection: async () => {}, production: true }),
+    /DATABASE_URL is required in production/
+  );
+  assert.throws(
+    () => createNodeApiHandler({ databaseUrl: 'postgres://app-role@db/cribbit', checkConnection: async () => {}, production: true }),
+    /SESSION_SECRET is required in production/
+  );
+});

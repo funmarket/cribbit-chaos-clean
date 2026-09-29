@@ -192,15 +192,14 @@ export function bootstrap(root: HTMLElement, platform: PlatformAdapter, options:
       const target = event.target instanceof Element ? event.target : null;
       if (!target) return;
 
-      const createAnchor = target.closest<HTMLAnchorElement>('a.cc-web-create[href="#roomCreation"]');
-      if (createAnchor) {
-        event.preventDefault();
-        root.querySelector<HTMLElement>('#roomCreation')?.scrollIntoView({ block: 'start', behavior: 'smooth' });
-        return;
-      }
-
       const action = target.closest<HTMLElement>('[data-action]')?.dataset.action;
       if (action === 'create-game') {
+        event.preventDefault();
+        createSession(readCreateName());
+        return;
+      }
+      const createAnchor = target.closest<HTMLAnchorElement>('a.cc-web-create[href="#roomCreation"]');
+      if (createAnchor) {
         event.preventDefault();
         createSession(readCreateName());
         return;

@@ -34,6 +34,7 @@ export interface NodeApiRuntimeDependencies {
   readonly sessionSecret?: string;
   readonly frontendOrigins?: readonly string[];
   readonly secureCookies?: boolean;
+  readonly production?: boolean;
 }
 
 async function readJson(request: IncomingMessage): Promise<unknown> {
@@ -115,15 +116,18 @@ export function createNodeApiHandler({
   pool: providedPool,
   telegramBotToken = '',
   telegramMaxAgeSeconds = 3600,
-  sessionSecret = 'cribbit-local-link-secret',
+  sessionSecret = '',
   frontendOrigins = [],
-  secureCookies = false
+  secureCookies = false,
+  production = false
 }: NodeApiRuntimeDependencies) {
+  if (production && !databaseUrl && !providedPool) throw new Error('DATABASE_URL is required in production');
+  if (production && !sessionSecret) throw new Error('SESSION_SECRET is required in production');
   let pool = providedPool ?? null;
   const memoryStore = createMemorySessionStore();
   const memoryTransactions = createMemoryCommandTransactionPort();
   const memoryIdentity = createMemoryIdentityStore();
-  const useMemory = !providedPool && !databaseUrl;
+  const useMemory = !production && !providedPool && !databaseUrl;
   const requirePool = (): Pool => {
     if (pool) return pool;
     if (!databaseUrl) throw new Error('DATABASE_URL is required for game API routes');
@@ -146,7 +150,9 @@ export function createNodeApiHandler({
     const pathname = url.pathname;
 
     if (!applyCors(request, response, frontendOrigins)) {
-      if (request.method === 'OPTIONS') { response.statusCode = 403; response.end(); return; }
+      response.statusCode = 403;
+      response.end();
+      return;
     }
 
     if (request.method === 'OPTIONS') { response.statusCode = 204; response.end(); return; }
@@ -313,13 +319,11 @@ export function createNodeApiHandler({
       if (route && request.method === 'POST' && route.action === 'join') {
         const context = await requireUser();
         const body = await readJson(request);
-        const existingCount = await sessionStore().memberCount(route.sessionId);
-        const playerId = `p${existingCount + 1}`;
         const displayName = safeDisplayName(body, context.user.displayName);
-        const joined = await sessionStore().joinSession({ sessionId: route.sessionId, principalId: context.userId, playerId, displayName });
+        const joined = await sessionStore().joinSession({ sessionId: route.sessionId, principalId: context.userId, displayName });
         if (joined.status === 'rejected') { sendJson(response, 400, { ok: false, code: joined.reason }); return; }
         sendJson(response, 200, {
-          player: { sessionId: route.sessionId, playerId, displayName },
+          player: { sessionId: route.sessionId, playerId: joined.value.playerId, displayName },
           projection: joined.value.projection
         });
         return;
