@@ -92,9 +92,15 @@ A task is not complete if the code/deployment changed but the canonical roadmap/
 
 ### 0.5 Current roadmap pointer
 
-**NEXT TASK:** `BASE-001A - Exact-head staging infrastructure alignment and data classification.`
+**NEXT TASK:** `ENG-002 - Core legality and matching` (ENG-001 classification is complete; `BASE-001A` remains deferred and not PASS).
 
 `BASE-001` is temporarily blocked until `BASE-001A` proves that the current Web and Telegram previews, current CLEAN API, and intended staging PostgreSQL path are aligned to one exact candidate.
+
+### 0.5B Owner-directed gameplay reprioritization — 2026-09-29
+
+The owner has explicitly reprioritized the next source-only work toward canonical game-engine recovery because the server-authoritative Simulation and Live path currently share an incomplete P7A playable slice. This supersedes the old execution ordering for the authorized GitHub/source task only; it does **not** mark `BASE-001A` or `BASE-001` PASS, authorize Railway/PostgreSQL/Cloudflare mutation, authorize deployment, or permit unresolved rule defaults.
+
+The authorized sequence is `ENG-001` classification first, followed by focused `ENG-002` through `ENG-005` implementation slices, then one focused PR per later social family. The clean engine remains the sole gameplay authority; Web, Telegram, API orchestration, and Simulation remain consumers/adapters.
 
 Do not skip ahead to special-card work, engine salvage, schema mutation, production activation, branch cleanup, or merge work until this staging-alignment gate is complete.
 
@@ -2692,7 +2698,7 @@ Design/implement clean rematch/new game without reusing stale game state.
 
 ### `ENG-001` - Donor mechanics matrix
 
-**Status:** `NOT STARTED`
+**Status:** `PASS`
 
 Create a permanent in-handoff or approved docs matrix mapping:
 
@@ -2705,6 +2711,8 @@ Create a permanent in-handoff or approved docs matrix mapping:
 - port action.
 
 This task is read-only classification.
+
+PR #13 is the source-of-truth completion record. Completion commit: `d78764dfbe85c9e771f9cab721532cbb2dfd84f3`; PR remains open for owner review. ENG-002 remains a separate implementation task and is not included in this PR.
 
 ### `ENG-002` - Core legality and matching
 
@@ -3461,6 +3469,7 @@ Agents append concise evidence rows. Do not turn this into a chat transcript.
 | 2026-09-21 | DOC-REBASE-001 | PASS | Whole-product scope, Control Room architecture, live Documentation Sync Gate, authority guards and schema/domain roadmap introduced in current docs-only rebaseline | No gameplay rule/source, DB migration, Railway/Cloudflare, `main`, merge or production mutation belongs to this documentation task. |
 | 2026-09-21 | RULE-TURN / RULE-ACQUISITION | PASS | `gamerules.md` commit `2f0e8fe853321d81ad59defd8ba762f79c4c5712` | Owner locked voluntary normal draw as always available and turn-ending; initial 7-card opening deal may contain Special cards which stay in hand and do not auto-trigger. Separate special `DRAW` card-family turn-loss detail remains unresolved. |
 | 2026-09-21 | UI-RULE-SYNC | PASS | `packages/ui/src/game-table.ts` commit `3b1937676e77d758b4a356cfe9ca85640b20d5f3` | Focused contradiction audit found the donor QA knob defaulted voluntary draw off while CLEAN engine already permits draw with legal matches and advances turn. Active CLEAN presentation now shows the canonical rule as enabled/locked; donor evidence remains untouched. Audit also confirmed current CLEAN playable slice still rejects non-number `PLAY_CARD`, so owner-approved Special-card-from-hand legality is documented but not yet implemented. |
+| 2026-09-29 | ENG-001 | PASS | PR #13; completion commit `d78764dfbe85c9e771f9cab721532cbb2dfd84f3`; matrix `docs/engine-mechanics-matrix.md`; documentation diff check PASS | Owner explicitly reprioritized source-only canonical engine recovery. Classification confirms CLEAN has one authoritative but incomplete P7A path; donor code/tests remain evidence only. No Railway, PostgreSQL, Cloudflare, deployment, schema, or gameplay mutation performed. ENG-002 is separate and remains unmerged. |
 
 ---
 
